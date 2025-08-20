@@ -78,6 +78,15 @@ function AutoResetOrbitControls() {
 
   const resetCamera = () => {
     if (controlsRef.current) {
+      // Stop any ongoing momentum/velocity by resetting internal state
+      if (controlsRef.current.object) {
+        controlsRef.current.object.rotation.set(0, 0, 0)
+      }
+      
+      // Reset OrbitControls internal velocity properties
+      controlsRef.current.dampingFactor = 1
+      controlsRef.current.enableDamping = false
+      
       // Get current spherical coordinates
       const currentPos = controlsRef.current.object.position.clone()
       currentPos.sub(controlsRef.current.target)
@@ -99,6 +108,11 @@ function AutoResetOrbitControls() {
         controlsRef.current.object.position.copy(finalPos)
         controlsRef.current.target.copy(initialTarget.current)
         controlsRef.current.update()
+        
+        // Re-enable damping
+        controlsRef.current.enableDamping = true
+        controlsRef.current.dampingFactor = 0.05
+        
         setIsResetting(false)
         return
       }
@@ -135,6 +149,11 @@ function AutoResetOrbitControls() {
   useEffect(() => {
     const handleMouseDown = () => {
       setIsResetting(false) // Stop any ongoing reset animation
+      if (controlsRef.current) {
+        // Re-enable damping if it was disabled
+        controlsRef.current.enableDamping = true
+        controlsRef.current.dampingFactor = 0.05
+      }
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
