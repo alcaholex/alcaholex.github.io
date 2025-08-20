@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { useGLTF, Center, MeshTransmissionMaterial, Environment } from '@react-three/drei'
+import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls } from '@react-three/drei'
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Raycaster, Vector2 } from 'three'
 
@@ -36,7 +36,7 @@ function Model({ url }) {
   })
 
   return (
-    <Center scale={viewport.width / 7}>
+    <Center scale={viewport.width / 8.5}>
       {scene.children.map((child, index) => (
         <mesh 
           key={index} 
@@ -65,7 +65,7 @@ function Model({ url }) {
 
 export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   return (
-    <div className="fixed inset-0 z-0">
+    <div className="fixed inset-0 z-20">
       <Canvas
         camera={{ position: [0, 0, 10], fov: 50 }}
         style={{ background: 'white' }}
@@ -76,6 +76,8 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
             <meshBasicMaterial color="#ffffff" side={2} />
           </mesh>
         </Environment>
+        
+        <OrbitControls enableZoom={false} enablePan={false} />
         
         <Suspense fallback={null}>
           <Model url={modelPath} />
