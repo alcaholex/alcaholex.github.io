@@ -165,7 +165,7 @@ function AutoResetOrbitControls() {
   )
 }
 
-export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
+export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
   return (
     <div className="fixed inset-0 z-20">
       <Canvas
