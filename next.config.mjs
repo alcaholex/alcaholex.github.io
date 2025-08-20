@@ -6,8 +6,7 @@ const nextConfig = {
     unoptimized: true
   },
   basePath: '/portfolio-site',
-  assetPrefix: '/portfolio-site/',
-  distDir: 'out'
+  assetPrefix: '/portfolio-site/'
 };
 
 export default nextConfig;
