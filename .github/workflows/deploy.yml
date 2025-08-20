@@ -45,20 +45,42 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Next.js config
+        run: |
+          echo "Checking Next.js config files:"
+          ls -la next.config.*
+          echo "Content of next.config.mjs:"
+          cat next.config.mjs || echo "next.config.mjs not found"
+          echo "Content of next.config.js (if exists):"
+          cat next.config.js || echo "next.config.js not found"
+
       - name: Build with Next.js
-        run: npm run build
+        run: |
+          echo "Building Next.js with static export..."
+          npm run build
+          echo "Build completed"
 
       - name: List build output
         run: |
           echo "Current directory contents:"
           ls -la
+          echo "Contents of .next directory:"
+          ls -la .next/ || echo ".next directory not found"
           echo "Checking for out directory:"
           if [ -d "out" ]; then
             echo "out directory exists:"
             ls -la out/
           else
             echo "out directory not found"
-            exit 1
+            echo "Creating out directory from .next/out if it exists..."
+            if [ -d ".next/out" ]; then
+              mv .next/out ./out
+              echo "Moved .next/out to ./out"
+              ls -la out/
+            else
+              echo "No static export found"
+              exit 1
+            fi
           fi
 
       - name: Upload Pages artifact
