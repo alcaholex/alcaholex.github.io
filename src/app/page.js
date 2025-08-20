@@ -6,7 +6,7 @@ export default function Home() {
       <ThreeDModel />
       <section className="min-h-screen flex items-end justify-center relative z-30 pointer-events-none snap-start" data-navbar-theme="light">
         <div className="container mx-auto px-4 py-32 relative pointer-events-none">
-          <h1 className="text-4xl font-bold text-center text-gray-900">
+          <h1 className="text-4xl font-medium text-center text-gray-900">
             welcome to my portfolio
           </h1>
         </div>
