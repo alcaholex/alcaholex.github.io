@@ -18,6 +18,10 @@
   }
 }
 
+html {
+  scroll-snap-type: y mandatory;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
