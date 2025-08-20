@@ -46,14 +46,39 @@ jobs:
         run: npm ci
 
       - name: Build with Next.js
-        run: npm run build
+        run: |
+          echo "Building Next.js application..."
+          npm run build
+          echo "Build completed"
 
       - name: List build output
         run: |
           echo "Current directory contents:"
           ls -la
-          echo "Checking for out directory:"
-          ls -la out/ || echo "out directory not found"
+          echo "Looking for possible output directories:"
+          find . -name "out" -type d 2>/dev/null || echo "No 'out' directory found"
+          find . -name ".next" -type d 2>/dev/null || echo "No '.next' directory found"
+          echo "Checking build directory contents:"
+          if [ -d "out" ]; then
+            echo "out directory exists:"
+            ls -la out/
+          elif [ -d ".next" ]; then
+            echo ".next directory exists:"
+            ls -la .next/
+          else
+            echo "Neither out nor .next directory found"
+          fi
+
+      - name: Create out directory if missing
+        run: |
+          if [ ! -d "out" ]; then
+            echo "Creating out directory manually..."
+            mkdir -p out
+            if [ -d ".next" ]; then
+              echo "Copying .next contents to out..."
+              cp -r .next/* out/
+            fi
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
