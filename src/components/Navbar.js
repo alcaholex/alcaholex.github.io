@@ -32,7 +32,7 @@ export default function Navbar() {
       }
     }
 
-    // check on mount
+    // check on start
     checkNavbarTheme()
 
     // check on scroll with throttling
