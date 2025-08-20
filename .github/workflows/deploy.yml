@@ -48,6 +48,13 @@ jobs:
       - name: Build with Next.js
         run: npm run build
 
+      - name: List build output
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "Checking for out directory:"
+          ls -la out/ || echo "out directory not found"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
