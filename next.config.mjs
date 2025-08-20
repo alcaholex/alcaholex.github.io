@@ -5,7 +5,8 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  // Disable server-based image optimization for static export
+  basePath: '/portfolio-site',
+  assetPrefix: '/portfolio-site/',
   distDir: 'out'
 };
 
