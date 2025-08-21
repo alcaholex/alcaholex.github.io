@@ -14,7 +14,6 @@ export default function Navbar() {
     { href: '/about', label: 'about', scrollTo: 'section-2' },
     { href: '/projects', label: 'projects' },
     { href: '/art', label: 'art' },
-    { href: '/blog', label: 'blog' }
   ]
 
   const handleNavClick = (e, item) => {
