@@ -186,7 +186,7 @@ function AutoResetOrbitControls() {
 
 export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
   return (
-    <div className="fixed inset-0 z-20">
+    <div className="fixed inset-0 z-20" style={{ top: '-200px' }}>
       <Canvas
         camera={{ position: [0, -5, 10], fov: 50 }}
         style={{ background: 'white' }}
