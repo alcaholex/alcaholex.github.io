@@ -89,7 +89,7 @@ export default function Home() {
             </h1>
             <div className="w-24 h-1 bg-gray-300 mx-auto mb-6"></div>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Some projects I'm proud of:
+              Some projects I&apos;m proud of:
             </p>
           </div>
 
