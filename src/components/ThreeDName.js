@@ -211,10 +211,10 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
   return (
     <>
       {!isLoaded && <LoadingScreen />}
-      <div className="fixed inset-0 z-20">
+      <div className="absolute inset-0 z-20">
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
-          style={{ background: 'white' }}
+          style={{ background: '#f9fafb' }}
         >
           <Environment>
             <mesh>
