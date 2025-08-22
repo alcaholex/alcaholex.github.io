@@ -67,14 +67,19 @@ export default function Navbar() {
 
   useEffect(() => {
     const checkNavbarTheme = () => {
-      const navbarPosition = 60 // approximate navbar position from top
+      const scrollY = window.scrollY
+      const viewportHeight = window.innerHeight
       const sections = document.querySelectorAll('[data-navbar-theme]')
       
       for (const section of sections) {
         const rect = section.getBoundingClientRect()
+        const sectionTop = scrollY + rect.top
+        const sectionBottom = sectionTop + rect.height
         
-        // check if navbar is within this section
-        if (rect.top <= navbarPosition && rect.bottom >= navbarPosition) {
+        // More responsive detection - trigger when section is 30% visible from top
+        const triggerPoint = scrollY + viewportHeight * 0.5
+        
+        if (triggerPoint >= sectionTop && triggerPoint <= sectionBottom) {
           const theme = section.getAttribute('data-navbar-theme')
           const sectionId = section.getAttribute('id')
           
