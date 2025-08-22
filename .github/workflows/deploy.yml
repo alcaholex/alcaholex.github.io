@@ -100,6 +100,22 @@ jobs:
             fi
           fi
 
+      - name: Verify out directory before upload
+        run: |
+          if [ ! -d "out" ]; then
+            echo "ERROR: out directory does not exist!"
+            exit 1
+          fi
+          if [ -z "$(ls -A out)" ]; then
+            echo "ERROR: out directory is empty!"
+            exit 1
+          fi
+          echo "out directory verified successfully"
+          echo "Contents of out directory:"
+          ls -la out/
+          echo "Size of out directory:"
+          du -sh out/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -114,4 +130,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v3
