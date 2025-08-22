@@ -5,13 +5,19 @@ import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls }
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Raycaster, Vector2, Vector3, Euler, Spherical } from 'three'
 
-function Model({ url }) {
-  const { scene } = useGLTF(url)
+function Model({ url, onLoad }) {
+  const { scene } = useGLTF(url, true)
   const { viewport, camera } = useThree()
   const [mouse, setMouse] = useState(new Vector2())
   const meshRefs = useRef([])
   const materialRefs = useRef([])
   const raycaster = useRef(new Raycaster())
+  
+  useEffect(() => {
+    if (scene && onLoad) {
+      onLoad()
+    }
+  }, [scene, onLoad])
   
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -184,26 +190,46 @@ function AutoResetOrbitControls() {
   )
 }
 
-export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
+function LoadingScreen() {
   return (
-    <div className="fixed inset-0 z-20" style={{ top: '-200px' }}>
-      <Canvas
-        camera={{ position: [0, -5, 10], fov: 50 }}
-        style={{ background: 'white' }}
-      >
-        <Environment>
-          <mesh>
-            <sphereGeometry args={[50, 32, 32]} />
-            <meshBasicMaterial color="#ffffff" side={2} />
-          </mesh>
-        </Environment>
-        
-        <AutoResetOrbitControls />
-        
-        <Suspense fallback={null}>
-          <Model url={modelPath} />
-        </Suspense>
-      </Canvas>
+    <div className="fixed inset-0 z-30 bg-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600 font-medium">loading...</p>
+      </div>
     </div>
+  )
+}
+
+export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  const handleModelLoad = () => {
+    setIsLoaded(true)
+  }
+
+  return (
+    <>
+      {!isLoaded && <LoadingScreen />}
+      <div className="fixed inset-0 z-20">
+        <Canvas
+          camera={{ position: [0, -5, 10], fov: 50 }}
+          style={{ background: 'white' }}
+        >
+          <Environment>
+            <mesh>
+              <sphereGeometry args={[50, 32, 32]} />
+              <meshBasicMaterial color="#ffffff" side={2} />
+            </mesh>
+          </Environment>
+          
+          <AutoResetOrbitControls />
+          
+          <Suspense fallback={null}>
+            <Model url={modelPath} onLoad={handleModelLoad} />
+          </Suspense>
+        </Canvas>
+      </div>
+    </>
   )
 }

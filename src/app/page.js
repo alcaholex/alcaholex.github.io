@@ -5,11 +5,6 @@ export default function Home() {
     <main>
       <ThreeDModel />
       <section id="section-1" className="min-h-screen flex items-end justify-center relative z-30 pointer-events-none snap-start" data-navbar-theme="light">
-        <div className="container mx-auto px-4 py-50 relative pointer-events-none">
-          <h1 className="text-4xl font-medium text-center text-gray-900">
-            Welcome to my portfolio.
-          </h1>
-        </div>
       </section>
       <section id="section-2" className="min-h-screen bg-gray-900 flex items-center justify-center relative z-30 snap-start" data-navbar-theme="dark">
         <div className="container mx-auto px-4 py-16">
