@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 const navItems = [
   { href: '/', label: 'home', scrollTo: 'section-1' },
   { href: '/about', label: 'about', scrollTo: 'section-2' },
-  { href: '/projects', label: 'projects' },
+  { href: '/projects', label: 'projects', scrollTo: 'section-3' },
   { href: '/art', label: 'art' },
 ]
 

@@ -192,7 +192,7 @@ function AutoResetOrbitControls() {
 
 function LoadingScreen() {
   return (
-    <div className="fixed inset-0 z-30 bg-white flex items-center justify-center">
+    <div className="fixed inset-0 z-30 bg-gray-50 flex items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-gray-600 font-medium">loading...</p>

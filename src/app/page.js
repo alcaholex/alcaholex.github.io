@@ -4,9 +4,9 @@ export default function Home() {
   return (
     <main>
       <ThreeDModel />
-      <section id="section-1" className="min-h-screen flex items-end justify-center relative z-30 pointer-events-none snap-start" data-navbar-theme="light">
+      <section id="section-1" className="h-[80vh] flex items-end justify-center relative z-30 pointer-events-none" data-navbar-theme="light">
       </section>
-      <section id="section-2" className="min-h-screen bg-gray-50 flex items-center justify-center relative z-30 snap-start" data-navbar-theme="light">
+      <section id="section-2" className="min-h-screen bg-gray-50 flex items-center justify-center relative z-30" data-navbar-theme="light">
         <div className="container mx-auto px-4 py-16 max-w-6xl">
           <div className="grid lg:grid-cols-3 gap-16 items-start">
             {/* Left Column - Title & Profile */}
@@ -80,14 +80,98 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <section className="min-h-screen bg-blue-50 flex items-center justify-center relative z-30 snap-start" data-navbar-theme="light">
-        <div className="container mx-auto px-4 py-16">
-          <h1 className="text-4xl font-bold text-center text-blue-900">
-            
-          </h1>
-          <p className="text-center text-blue-600 mt-4">
-            
-          </p>
+      <section id="section-3" className="min-h-screen bg-gray-50 flex items-center justify-center relative z-30" data-navbar-theme="light">
+        <div className="container mx-auto px-4 py-16 max-w-6xl">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h1 className="text-4xl font-medium text-gray-900 mb-4">
+              projects
+            </h1>
+            <div className="w-24 h-1 bg-gray-300 mx-auto mb-6"></div>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Some projects I'm proud of:
+            </p>
+          </div>
+
+          {/* Projects Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Project 1 */}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
+                <img 
+                  src="/portfolio-site/projects/portfolio-site.png" 
+                  alt="3D Portfolio Website" 
+                  className="max-w-full max-h-full object-contain rounded shadow-md"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-medium text-gray-900 mb-3">3D Portfolio Website</h3>
+                <p className="text-gray-600 mb-4">Portfolio built with Next.js and Tailwind CSS, featuring interactive 3D models built with Three.js.</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {['Next.js', 'Three.js', 'React'].map((tech) => (
+                    <span key={tech} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex space-x-3">
+                  <span className="text-gray-500 text-sm">This is the website!</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Project 2 */}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="h-48 bg-gray-100 flex items-center justify-center">
+                <span className="text-gray-400">screenshot</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-medium text-gray-900 mb-3">MALFUNCTION</h3>
+                <p className="text-gray-600 mb-4">First-person shooter game developed in Unity when I was learning and experimenting with game development.</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {['Unity', 'C#', 'Blender'].map((tech) => (
+                    <span key={tech} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex space-x-3">
+                  <a href="#" className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <span className="text-sm">Live Demo</span>
+                  </a>
+                  <a href="#" className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <span className="text-sm">GitHub</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Project 3 */}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="h-48 bg-gray-100 flex items-center justify-center">
+                <span className="text-gray-400">screenshot</span>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-medium text-gray-900 mb-3">yap yap yap</h3>
+                <p className="text-gray-600 mb-4">yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap yap </p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {['yap', 'yap1', 'yap2'].map((tech) => (
+                    <span key={tech} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex space-x-3">
+                  <a href="#" className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <span className="text-sm">Live Demo</span>
+                  </a>
+                  <a href="#" className="text-gray-500 hover:text-gray-700 transition-colors">
+                    <span className="text-sm">GitHub</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
