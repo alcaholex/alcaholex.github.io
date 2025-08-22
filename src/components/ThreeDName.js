@@ -203,9 +203,42 @@ function LoadingScreen() {
 
 export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
   const [isLoaded, setIsLoaded] = useState(false)
+  const [shouldRender, setShouldRender] = useState(true)
+  const [wasUnloaded, setWasUnloaded] = useState(false)
 
   const handleModelLoad = () => {
     setIsLoaded(true)
+  }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY
+      const viewportHeight = window.innerHeight
+      const section3Start = viewportHeight * 2 // Section 3 starts after sections 1 and 2
+      
+      // Hide 3D model when scrolled into section 3
+      if (scrollPosition >= section3Start - viewportHeight * 0.2) {
+        if (shouldRender) {
+          setWasUnloaded(true)
+        }
+        setShouldRender(false)
+      } else {
+        if (!shouldRender && wasUnloaded) {
+          // Reset loading state when coming back from being unloaded
+          setIsLoaded(false)
+        }
+        setShouldRender(true)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Check initial position
+    
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [shouldRender, wasUnloaded])
+
+  if (!shouldRender) {
+    return null
   }
 
   return (
@@ -215,6 +248,8 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
           style={{ background: '#f9fafb' }}
+          // frameloop="demand"
+          performance={{ min: 0.8 }}
         >
           <Environment>
             <mesh>

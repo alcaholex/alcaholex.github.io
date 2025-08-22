@@ -4,6 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+const navItems = [
+  { href: '/', label: 'home', scrollTo: 'section-1' },
+  { href: '/about', label: 'about', scrollTo: 'section-2' },
+  { href: '/projects', label: 'projects' },
+  { href: '/art', label: 'art' },
+]
+
 export default function Navbar() {
   const pathname = usePathname()
   const [isDarkBackground, setIsDarkBackground] = useState(false)
@@ -12,13 +19,6 @@ export default function Navbar() {
   const navRef = useRef(null)
   const isNavigating = useRef(false)
   const scrollTimeoutRef = useRef(null)
-  
-  const navItems = [
-    { href: '/', label: 'home', scrollTo: 'section-1' },
-    { href: '/about', label: 'about', scrollTo: 'section-2' },
-    { href: '/projects', label: 'projects' },
-    { href: '/art', label: 'art' },
-  ]
 
   const updateHighlightPosition = useCallback(() => {
     if (!navRef.current) return
@@ -43,7 +43,7 @@ export default function Navbar() {
     } else {
       setHighlightStyle({ opacity: 0 })
     }
-  }, [navItems, activeSection, pathname])
+  }, [activeSection, pathname])
 
   const handleNavClick = (e, item) => {
     if (item.scrollTo && pathname === '/') {
@@ -93,11 +93,14 @@ export default function Navbar() {
 
     // check on scroll with throttling
     let ticking = false
+    let lastScrollTime = 0
     const handleScroll = () => {
-      if (!ticking) {
+      const now = Date.now()
+      if (!ticking && now - lastScrollTime > 16) { // Limit to ~60fps
         requestAnimationFrame(() => {
           checkNavbarTheme()
           ticking = false
+          lastScrollTime = now
           
           // Reset navigation flag after scroll stops (debounced)
           if (isNavigating.current) {
@@ -106,7 +109,7 @@ export default function Navbar() {
             }
             scrollTimeoutRef.current = setTimeout(() => {
               isNavigating.current = false
-            }, 150) // Reset after scroll stops for 150ms
+            }, 300) // Increased timeout to 300ms for better stability
           }
         })
         ticking = true
