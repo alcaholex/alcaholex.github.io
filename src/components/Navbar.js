@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -20,7 +20,7 @@ export default function Navbar() {
     { href: '/art', label: 'art' },
   ]
 
-  const updateHighlightPosition = () => {
+  const updateHighlightPosition = useCallback(() => {
     if (!navRef.current) return
     
     const activeItem = navItems.find(item => 
@@ -43,7 +43,7 @@ export default function Navbar() {
     } else {
       setHighlightStyle({ opacity: 0 })
     }
-  }
+  }, [navItems, activeSection, pathname])
 
   const handleNavClick = (e, item) => {
     if (item.scrollTo && pathname === '/') {
@@ -126,14 +126,14 @@ export default function Navbar() {
   // Update highlight position when active section or pathname changes
   useEffect(() => {
     updateHighlightPosition()
-  }, [activeSection, pathname])
+  }, [activeSection, pathname, updateHighlightPosition])
 
   // Update highlight position on window resize
   useEffect(() => {
     const handleResize = () => updateHighlightPosition()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [updateHighlightPosition])
 
   return (
     <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 font-montserrat">

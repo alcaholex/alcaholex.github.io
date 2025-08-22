@@ -14,7 +14,7 @@ export default function Home() {
               {/* Title */}
               <div>
                 <h1 className="text-4xl font-medium text-gray-900 mb-4">
-                  hello, i'm <span className="font-bold">alex</span>
+                  hello, i&apos;m <span className="font-bold">alex</span>
                 </h1>
                 <div className="w-24 h-1 bg-gray-300"></div>
               </div>
