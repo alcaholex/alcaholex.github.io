@@ -72,13 +72,30 @@ jobs:
             ls -la out/
           else
             echo "out directory not found"
-            echo "Creating out directory from .next/out if it exists..."
-            if [ -d ".next/out" ]; then
+            echo "Searching for static export..."
+            
+            # Check common locations for Next.js 15 static export
+            if [ -d ".next/standalone" ]; then
+              echo "Found .next/standalone"
+              ls -la .next/standalone/
+            fi
+            
+            if [ -d ".next/server/app" ]; then
+              echo "Found .next/server/app - copying to out/"
+              mkdir -p out
+              cp -r .next/server/app/* out/ 2>/dev/null || echo "No files in .next/server/app"
+              cp -r .next/static out/_next/static 2>/dev/null || echo "No static files found"
+              cp -r public/* out/ 2>/dev/null || echo "No public files found"
+              echo "Created out directory:"
+              ls -la out/
+            elif [ -d ".next/out" ]; then
               mv .next/out ./out
               echo "Moved .next/out to ./out"
               ls -la out/
             else
-              echo "No static export found"
+              echo "No static export found in expected locations"
+              echo "Available .next subdirectories:"
+              find .next -type d -maxdepth 2 2>/dev/null || echo "No .next subdirectories"
               exit 1
             fi
           fi
