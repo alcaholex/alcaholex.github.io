@@ -122,8 +122,12 @@ export default function Home() {
 
             {/* Project 2 */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="h-48 bg-gray-100 flex items-center justify-center">
-                <span className="text-gray-400">screenshot</span>
+              <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
+                <img 
+                  src="/portfolio-site/projects/malfunction.png" 
+                  alt="3D Portfolio Website" 
+                  className="max-w-full max-h-full object-contain rounded shadow-md"
+                />
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-medium text-gray-900 mb-3">MALFUNCTION</h3>
@@ -136,10 +140,10 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="flex space-x-3">
-                  <a href="#" className="text-gray-500 hover:text-gray-700 transition-colors">
+                  <a href="https://store.steampowered.com/app/1899790/MALFUNCTION_FPS/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700 transition-colors">
                     <span className="text-sm">Live Demo</span>
                   </a>
-                  <a href="#" className="text-gray-500 hover:text-gray-700 transition-colors">
+                  <a href="https://github.com/alcaholex/MALFUNCTION-FPS" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700 transition-colors">
                     <span className="text-sm">GitHub</span>
                   </a>
                 </div>
