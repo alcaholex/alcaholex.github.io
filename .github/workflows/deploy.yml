@@ -39,6 +39,21 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Debug build output
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "Looking for out directory:"
+          if [ -d "out" ]; then
+            echo "out directory exists:"
+            ls -la out/
+          else
+            echo "out directory not found"
+            echo "Checking for other potential output directories:"
+            find . -name "*.html" -type f | head -10
+            find . -type d -name "*out*" | head -10
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
