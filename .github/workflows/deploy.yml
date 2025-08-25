@@ -116,10 +116,25 @@ jobs:
           echo "Size of out directory:"
           du -sh out/
 
+      - name: Debug before upload
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la
+          echo "Out directory check:"
+          if [ -d "out" ]; then
+            echo "out directory exists with contents:"
+            ls -la out/
+          else
+            echo "ERROR: out directory does not exist!"
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: out
+          path: ./out
 
   deploy:
     environment:
