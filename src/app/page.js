@@ -99,7 +99,7 @@ export default function Home() {
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
               <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
                 <img 
-                  src="/projects/portfolio-site.png" 
+                  src="/portfolio-site/projects/portfolio-site.png" 
                   alt="3D Portfolio Website" 
                   className="max-w-full max-h-full object-contain rounded shadow-md"
                 />
@@ -124,7 +124,7 @@ export default function Home() {
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
               <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
                 <img 
-                  src="/projects/malfunction.png" 
+                  src="/portfolio-site/projects/malfunction.png" 
                   alt="3D Portfolio Website" 
                   className="max-w-full max-h-full object-contain rounded shadow-md"
                 />
