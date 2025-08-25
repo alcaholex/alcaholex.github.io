@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,124 +28,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-        with:
-          static_site_generator: next
-
-      - name: Restore cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Check Next.js config
-        run: |
-          echo "Checking Next.js config files:"
-          ls -la next.config.*
-          echo "Content of next.config.mjs:"
-          cat next.config.mjs || echo "next.config.mjs not found"
-          echo "Content of next.config.js (if exists):"
-          cat next.config.js || echo "next.config.js not found"
+      - name: Build
+        run: npm run build
 
-      - name: Build with Next.js
-        run: |
-          echo "Building Next.js with static export..."
-          npm run build
-          echo "Build completed"
-
-      - name: List build output
-        run: |
-          echo "Current directory contents:"
-          ls -la
-          echo "Contents of .next directory:"
-          ls -la .next/ || echo ".next directory not found"
-          echo "Checking for out directory:"
-          if [ -d "out" ]; then
-            echo "out directory exists:"
-            ls -la out/
-          else
-            echo "out directory not found"
-            echo "Searching for static export..."
-            
-            # Check common locations for Next.js 15 static export
-            if [ -d ".next/standalone" ]; then
-              echo "Found .next/standalone"
-              ls -la .next/standalone/
-            fi
-            
-            if [ -d ".next/server/app" ]; then
-              echo "Found .next/server/app - copying to out/"
-              mkdir -p out
-              cp -r .next/server/app/* out/ 2>/dev/null || echo "No files in .next/server/app"
-              cp -r .next/static out/_next/static 2>/dev/null || echo "No static files found"
-              cp -r public/* out/ 2>/dev/null || echo "No public files found"
-              echo "Created out directory:"
-              ls -la out/
-            elif [ -d ".next/out" ]; then
-              mv .next/out ./out
-              echo "Moved .next/out to ./out"
-              ls -la out/
-            else
-              echo "No static export found in expected locations"
-              echo "Available .next subdirectories:"
-              find .next -type d -maxdepth 2 2>/dev/null || echo "No .next subdirectories"
-              exit 1
-            fi
-          fi
-
-      - name: Verify out directory before upload
-        run: |
-          if [ ! -d "out" ]; then
-            echo "ERROR: out directory does not exist!"
-            exit 1
-          fi
-          if [ -z "$(ls -A out)" ]; then
-            echo "ERROR: out directory is empty!"
-            exit 1
-          fi
-          echo "out directory verified successfully"
-          echo "Contents of out directory:"
-          ls -la out/
-          echo "Size of out directory:"
-          du -sh out/
-
-      - name: Debug before upload
-        run: |
-          echo "Current working directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          echo "Out directory check:"
-          if [ -d "out" ]; then
-            echo "out directory exists with contents:"
-            ls -la out/
-          else
-            echo "ERROR: out directory does not exist!"
-            exit 1
-          fi
-
-      - name: Upload Pages artifact
+      - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      pages: write
-      id-token: write
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
