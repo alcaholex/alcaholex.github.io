@@ -250,7 +250,7 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <h3 className="text-white text-lg font-medium mb-1 drop-shadow-lg">Waltz</h3>
-                    <p className="text-white/80 text-sm drop-shadow-lg">An audiovisualizer for Shostakovich's Waltz No. 2, inspired by Polyfjord</p>
+                    <p className="text-white/80 text-sm drop-shadow-lg">An audiovisualizer for Shostakovich&apos;s Waltz No. 2, inspired by Polyfjord</p>
                   </div>
                   <a href="https://www.instagram.com/p/DBaPyCjgtG_/" target="_blank" rel="noopener noreferrer" className="absolute top-4 right-4 bg-black/30 backdrop-blur-sm rounded-full p-2 hover:bg-black/40 transition-all duration-200">
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">

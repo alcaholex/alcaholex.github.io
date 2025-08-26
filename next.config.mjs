@@ -6,7 +6,10 @@ const nextConfig = {
     unoptimized: true
   },
   basePath: '/portfolio-site',
-  assetPrefix: '/portfolio-site'
+  assetPrefix: '/portfolio-site',
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
 };
 
 export default nextConfig;
