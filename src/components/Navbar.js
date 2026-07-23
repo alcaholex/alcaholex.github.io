@@ -8,7 +8,7 @@ const navItems = [
   { href: '/', label: 'home', scrollTo: 'section-1' },
   { href: '/about', label: 'about', scrollTo: 'section-2' },
   { href: '/projects', label: 'projects', scrollTo: 'section-3' },
-  { href: '/art', label: 'art' },
+  { href: '/art', label: 'art', scrollTo: 'section-4' },
 ]
 
 export default function Navbar() {
@@ -76,8 +76,8 @@ export default function Navbar() {
         const sectionTop = scrollY + rect.top
         const sectionBottom = sectionTop + rect.height
         
-        // More responsive detection - trigger when section is 30% visible from top
-        const triggerPoint = scrollY + viewportHeight * 0.5
+        // More responsive detection - trigger when section is 10% visible from top
+        const triggerPoint = scrollY + viewportHeight * 0.1
         
         if (triggerPoint >= sectionTop && triggerPoint <= sectionBottom) {
           const theme = section.getAttribute('data-navbar-theme')
