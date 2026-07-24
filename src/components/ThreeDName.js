@@ -228,7 +228,7 @@ function useLowEndDevice() {
   return lowEnd
 }
 
-export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
+export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   const lowEnd = useLowEndDevice()
   const [isLoaded, setIsLoaded] = useState(false)
   const [showHint, setShowHint] = useState(!hasDraggedBefore)

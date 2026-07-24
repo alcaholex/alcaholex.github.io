@@ -1,7 +1,7 @@
 const projects = [
   {
     title: '3D Portfolio Website',
-    image: '/portfolio-site/projects/portfolio-site.png',
+    image: '/projects/portfolio-site.png',
     alt: '3D Portfolio Website',
     description: 'Portfolio built with Next.js and Tailwind CSS, featuring interactive 3D models built with Three.js.',
     tech: ['Next.js', 'Three.js', 'React'],
@@ -9,7 +9,7 @@ const projects = [
   },
   {
     title: 'MALFUNCTION',
-    image: '/portfolio-site/projects/malfunction.png',
+    image: '/projects/malfunction.png',
     alt: 'MALFUNCTION',
     description: 'First-person shooter game developed in Unity when I was learning and experimenting with game development.',
     tech: ['Unity', 'C#', 'Blender'],
@@ -20,7 +20,7 @@ const projects = [
   },
   {
     title: 'Interactive Cell Biology',
-    image: '/portfolio-site/projects/cell.png',
+    image: '/projects/cell.png',
     alt: 'Cell Project',
     description: 'Interactive visualization of the animal cell and its organelles; created for an elementary school project.',
     tech: ['Unity', 'C#', 'Blender'],

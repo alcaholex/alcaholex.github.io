@@ -54,7 +54,7 @@ jobs:
           node-version: "20"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
       - name: Setup Pages
-        # No static_site_generator input: basePath, assetPrefix and images.unoptimized
+        # No static_site_generator input: output export and images.unoptimized
         # are managed directly in next.config.mjs. Setting it makes this action generate
         # a competing next.config.js that shadows ours, so `output: export` never runs.
         uses: actions/configure-pages@v5

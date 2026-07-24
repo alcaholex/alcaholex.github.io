@@ -28,7 +28,7 @@ export default function Home() {
               <div className="flex justify-center">
                 <div className="w-64 h-64 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full overflow-hidden shadow-lg">
                   <img
-                    src="/portfolio-site/pfp.jpg"
+                    src="/pfp.jpg"
                     alt="Alex Li Profile Picture"
                     className="w-full h-full object-cover"
                   />

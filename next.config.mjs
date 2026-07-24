@@ -5,8 +5,6 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  basePath: '/portfolio-site',
-  assetPrefix: '/portfolio-site',
   eslint: {
     ignoreDuringBuilds: false,
   },

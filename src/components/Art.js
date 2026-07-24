@@ -3,7 +3,7 @@ import { InstagramIcon } from './Icons'
 const artworks = [
   {
     title: "Agamemnon's Helmet",
-    image: '/portfolio-site/art/agamemnon.png',
+    image: '/art/agamemnon.png',
     alt: "Agamemnon's Helmet",
     description: (
       <>Renders of ancient Greek king Agamemnon&apos;s helmet. A love letter to Christopher Nolan&apos;s <i>Odyssey</i>.</>
@@ -12,21 +12,21 @@ const artworks = [
   },
   {
     title: 'Space Megastructure',
-    image: '/portfolio-site/art/megastructure.png',
+    image: '/art/megastructure.png',
     alt: 'Space Megastructure',
     description: 'An arbitrarily large space structure',
     href: 'https://www.instagram.com/p/Da39u8YoKcb/',
   },
   {
     title: 'Robot Renders',
-    image: '/portfolio-site/art/2053x.png',
+    image: '/art/2053x.png',
     alt: 'Robot Renders',
     description: 'A collection of VEX robot renders. Includes a climbing animation',
     href: 'https://www.instagram.com/p/DYdmqFslvsi/',
   },
   {
     title: 'Water Shader',
-    image: '/portfolio-site/art/ships.png',
+    image: '/art/ships.png',
     alt: 'Water Shader',
     description: 'A semi-stylized demonstration of a water shader, rendered alongside ships',
     href: 'https://www.instagram.com/p/DQ3AFVfDYtu/',
@@ -34,28 +34,28 @@ const artworks = [
   },
   {
     title: 'LEGO Water',
-    image: '/portfolio-site/art/legowater.png',
+    image: '/art/legowater.png',
     alt: 'LEGO Water',
     description: 'A fun LEGO-like fluid simulation',
     href: 'https://www.instagram.com/p/DNmvmOXAffC/',
   },
   {
     title: 'Portal',
-    image: '/portfolio-site/art/portal.png',
+    image: '/art/portal.png',
     alt: 'Portal',
     description: 'A VFX shot of a portal in a dark environment, inspired by Doctor Strange',
     href: 'https://www.instagram.com/p/DLfQNJfAJ7Q/',
   },
   {
     title: 'Cyberpunk City',
-    image: '/portfolio-site/art/cyberpunk.png',
+    image: '/art/cyberpunk.png',
     alt: 'Cyberpunk City',
     description: 'A gloomy cyberpunk-inspired scene densely packed with dark alleys and neon lights',
     href: 'https://www.instagram.com/p/DJqQghhgFq3/',
   },
   {
     title: 'Planets',
-    image: '/portfolio-site/art/earth_render.png',
+    image: '/art/earth_render.png',
     alt: 'Planets',
     description: 'A series of planet renders from our very own solar system',
     href: 'https://www.instagram.com/p/C5kCDTDA8-W/',
@@ -63,7 +63,7 @@ const artworks = [
   },
   {
     title: 'Mountainous Landscape',
-    image: '/portfolio-site/art/mountains.png',
+    image: '/art/mountains.png',
     alt: 'Mountainous Landscape',
     description: 'A snowy, semi-realistic mountainous landscape created in Gaea and Blender',
     href: 'https://www.instagram.com/p/C2782vvA2rb/',
