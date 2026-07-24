@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  /* The site is designed light-only; keep the page the same gray-50 as the
+     sections regardless of the OS colour scheme. */
+  --background: #f9fafb;
   --foreground: #171717;
 }
 
@@ -10,13 +12,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-manrope), Helvetica, Arial, sans-serif;
   --font-montserrat: var(--font-montserrat);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 

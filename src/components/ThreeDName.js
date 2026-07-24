@@ -167,6 +167,24 @@ function AutoResetOrbitControls() {
   )
 }
 
+// The canvas is taller than one screen (so the name can render over section 2),
+// which puts its centre — and the OrbitControls pivot at world origin — below the
+// fold. This applies a vertical lens shift so origin renders in the first
+// viewport instead. It is a depth-independent shear (elements[9]): a uniform image
+// translation, so the model still rotates about its own centre and the pivot does
+// not move. Re-applied each frame because OrbitControls/resize rebuild the matrix.
+function LensShift() {
+  const { camera, size } = useThree()
+
+  useFrame(() => {
+    const screenHeight = typeof window !== 'undefined' ? window.innerHeight : size.height
+    camera.projectionMatrix.elements[9] = screenHeight / size.height - 1
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert()
+  })
+
+  return null
+}
+
 function LoadingScreen() {
   return (
     <div className="fixed inset-0 z-30 bg-gray-50 flex items-center justify-center">
@@ -184,7 +202,7 @@ let hasDraggedBefore = false
 
 function DragHint() {
   return (
-    <div className="absolute inset-0 z-40 pointer-events-none flex items-end justify-center pb-16">
+    <div className="absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-16">
       <div className="flex items-center gap-2 text-gray-500 text-base font-medium animate-pulse [animation-duration:3s]">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l-4 5 4 5M16 7l4 5-4 5" />
@@ -214,8 +232,10 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
   const lowEnd = useLowEndDevice()
   const [isLoaded, setIsLoaded] = useState(false)
   const [showHint, setShowHint] = useState(!hasDraggedBefore)
-  const [shouldRender, setShouldRender] = useState(true)
-  const [wasUnloaded, setWasUnloaded] = useState(false)
+  // The Canvas stays mounted for the whole page; this only toggles whether its
+  // render loop runs. Scrolling past the hero pauses it (no GPU work) instead of
+  // tearing down the WebGL context, so scrolling back is instant with no reload.
+  const [isActive, setIsActive] = useState(true)
 
   const handleModelLoad = () => {
     setIsLoaded(true)
@@ -257,32 +277,18 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
     const handleScroll = () => {
       const scrollPosition = window.scrollY
       const viewportHeight = window.innerHeight
-      const section3Start = viewportHeight * 2 // Section 3 starts after sections 1 and 2
-      
-      // Hide 3D model when scrolled into section 3
-      if (scrollPosition >= section3Start - viewportHeight * 0.2) {
-        if (shouldRender) {
-          setWasUnloaded(true)
-        }
-        setShouldRender(false)
-      } else {
-        if (!shouldRender && wasUnloaded) {
-          // Reset loading state when coming back from being unloaded
-          setIsLoaded(false)
-        }
-        setShouldRender(true)
-      }
+
+      // The name scrolls with the page. Pause the render loop once it has scrolled
+      // off (~one screen); resume when it comes back. Never unmounts, so scrolling
+      // back is instant.
+      setIsActive(scrollPosition < viewportHeight)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll() // Check initial position
-    
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [shouldRender, wasUnloaded])
 
-  if (!shouldRender) {
-    return null
-  }
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // lowEnd is null until the client-side probe runs; hold the loading screen
   // rather than mount the Canvas with a budget we are about to change.
@@ -293,12 +299,18 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
   return (
     <>
       {!isLoaded && <LoadingScreen />}
-      <div className="absolute inset-0 z-20">
+      {/* Taller than one screen and layered ABOVE the sections (z-40 > z-30) with a
+          transparent background, so the name renders over section 2 as it rises.
+          Scrolls with the page. LensShift keeps the name in the first viewport with
+          the pivot on the model. Pointer events only while the name is up top, so
+          the sections stay interactive once it has scrolled away. */}
+      <div className={`absolute inset-x-0 top-0 h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
-          style={{ background: '#f9fafb' }}
           dpr={lowEnd ? [1, 1.5] : [1, 2]}
-          // frameloop="demand"
+          // Paused (no GPU work) while scrolled out of the hero; the context and
+          // loaded model stay alive so scrolling back resumes instantly.
+          frameloop={isActive ? 'always' : 'never'}
           performance={{ min: 0.8 }}
         >
           <Environment>
@@ -309,6 +321,7 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
           </Environment>
           
           <AutoResetOrbitControls />
+          <LensShift />
 
           {/* Low-end only: trades resolution for frame rate under load. Kept off
               desktop so it can never soften the refraction edges there, and not
@@ -320,7 +333,7 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
           </Suspense>
         </Canvas>
       </div>
-      {isLoaded && showHint && <DragHint />}
+      {isActive && isLoaded && showHint && <DragHint />}
     </>
   )
 }
