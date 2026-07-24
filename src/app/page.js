@@ -216,8 +216,8 @@ export default function Home() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4">
-                      <h3 className="text-white text-lg font-medium mb-1 drop-shadow-lg">Agamemnon's Helmet</h3>
-                      <p className="text-white/80 text-sm drop-shadow-lg">Renders of ancient Greek king Agamemnon's helmet. A love letter to Christopher Nolan's <i>Odyssey</i>.</p>
+                      <h3 className="text-white text-lg font-medium mb-1 drop-shadow-lg">Agamemnon&apos;s Helmet</h3>
+                      <p className="text-white/80 text-sm drop-shadow-lg">Renders of ancient Greek king Agamemnon&apos;s helmet. A love letter to Christopher Nolan&apos;s <i>Odyssey</i>.</p>
                     </div>
                     <a href="https://www.instagram.com/p/DbH1_5Qlq1d/" target="_blank" rel="noopener noreferrer" className="absolute top-4 right-4 bg-black/30 backdrop-blur-sm rounded-full p-2 hover:bg-black/40 transition-all duration-200">
                       <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
