@@ -1,65 +1,42 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls } from '@react-three/drei'
+import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls, AdaptiveDpr } from '@react-three/drei'
 import { Suspense, useRef, useState, useEffect } from 'react'
-import { Raycaster, Vector2, Vector3, Euler, Spherical } from 'three'
+import { Vector3, Spherical } from 'three'
 
-function Model({ url, onLoad }) {
+function Model({ url, onLoad, lowEnd }) {
   const { scene } = useGLTF(url, true)
-  const { viewport, camera } = useThree()
-  const [mouse, setMouse] = useState(new Vector2())
-  const meshRefs = useRef([])
-  const materialRefs = useRef([])
-  const raycaster = useRef(new Raycaster())
-  
+  const { viewport } = useThree()
+
   useEffect(() => {
     if (scene && onLoad) {
       onLoad()
     }
   }, [scene, onLoad])
-  
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMouse(new Vector2(
-        (e.clientX / window.innerWidth) * 2 - 1,
-        -(e.clientY / window.innerHeight) * 2 + 1
-      ))
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
-  
-  useFrame(() => {
-    raycaster.current.setFromCamera(mouse, camera)
-    const intersects = raycaster.current.intersectObjects(meshRefs.current.filter(Boolean))
-    
-    materialRefs.current.forEach((material, index) => {
-      if (material) {
-        const isHovered = intersects.some(intersect => intersect.object === meshRefs.current[index])
-      }
-    })
-  })
 
   return (
     <Center scale={viewport.width / 8.5}>
       {scene.children.map((child, index) => (
-        <mesh 
-          key={index} 
-          ref={el => meshRefs.current[index] = el}
-          geometry={child.geometry} 
-          scale={[2, 2, 2]} 
+        <mesh
+          key={index}
+          geometry={child.geometry}
+          scale={[2, 2, 2]}
           rotation={[Math.PI / 2, 0, 0]}
         >
-          <MeshTransmissionMaterial 
-            ref={el => materialRefs.current[index] = el}
+          {/* Desktop keeps drei's defaults: resolution undefined means the
+              transmission FBO matches the full drawing buffer, and samples
+              defaults to 10. Pinning either one downgrades desktop quality. */}
+          <MeshTransmissionMaterial
+            resolution={lowEnd ? 256 : undefined}
+            samples={lowEnd ? 4 : undefined}
+            backside={!lowEnd}
             distortion={0.2}
             thickness={0.5}
             roughness={0}
             transmission={0.7}
             ior={1.5}
             chromaticAberration={0.05}
-            backside={true}
             transparent={true}
           />
         </mesh>
@@ -201,14 +178,80 @@ function LoadingScreen() {
   )
 }
 
+// Module-scoped so the hint stays dismissed across the unmount/remount that
+// scrolling past the hero triggers. Resets on a full page load, which is fine.
+let hasDraggedBefore = false
+
+function DragHint() {
+  return (
+    <div className="absolute inset-0 z-40 pointer-events-none flex items-end justify-center pb-16">
+      <div className="flex items-center gap-2 text-gray-500 text-base font-medium animate-pulse [animation-duration:3s]">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l-4 5 4 5M16 7l4 5-4 5" />
+        </svg>
+        drag to rotate
+      </div>
+    </div>
+  )
+}
+
+// Cheap capability probe. Returns null until it has run on the client, so the
+// Canvas never mounts with the wrong material budget and rebuild it a tick later.
+function useLowEndDevice() {
+  const [lowEnd, setLowEnd] = useState(null)
+
+  useEffect(() => {
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches
+    const fewCores = (navigator.hardwareConcurrency || 8) <= 4
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    setLowEnd(coarsePointer || fewCores || reducedMotion)
+  }, [])
+
+  return lowEnd
+}
+
 export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.glb" }) {
+  const lowEnd = useLowEndDevice()
   const [isLoaded, setIsLoaded] = useState(false)
+  const [showHint, setShowHint] = useState(!hasDraggedBefore)
   const [shouldRender, setShouldRender] = useState(true)
   const [wasUnloaded, setWasUnloaded] = useState(false)
 
   const handleModelLoad = () => {
     setIsLoaded(true)
   }
+
+  // Dismiss the hint only on a real drag on the canvas — a plain click or a
+  // drag that starts elsewhere on the page does not count as "rotating".
+  useEffect(() => {
+    if (!showHint) return
+
+    let origin = null
+
+    const handlePointerDown = (e) => {
+      origin = e.target?.tagName === 'CANVAS' ? { x: e.clientX, y: e.clientY } : null
+    }
+    const handlePointerMove = (e) => {
+      if (!origin) return
+      if (Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 12) {
+        hasDraggedBefore = true
+        setShowHint(false)
+      }
+    }
+    const handlePointerUp = () => {
+      origin = null
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+    }
+  }, [showHint])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -241,6 +284,12 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
     return null
   }
 
+  // lowEnd is null until the client-side probe runs; hold the loading screen
+  // rather than mount the Canvas with a budget we are about to change.
+  if (lowEnd === null) {
+    return <LoadingScreen />
+  }
+
   return (
     <>
       {!isLoaded && <LoadingScreen />}
@@ -248,6 +297,7 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
           style={{ background: '#f9fafb' }}
+          dpr={lowEnd ? [1, 1.5] : [1, 2]}
           // frameloop="demand"
           performance={{ min: 0.8 }}
         >
@@ -259,12 +309,18 @@ export default function ThreeDModel({ modelPath = "/portfolio-site/models/name.g
           </Environment>
           
           <AutoResetOrbitControls />
-          
+
+          {/* Low-end only: trades resolution for frame rate under load. Kept off
+              desktop so it can never soften the refraction edges there, and not
+              `pixelated`, which disables smoothing on the upscale. */}
+          {lowEnd && <AdaptiveDpr />}
+
           <Suspense fallback={null}>
-            <Model url={modelPath} onLoad={handleModelLoad} />
+            <Model url={modelPath} onLoad={handleModelLoad} lowEnd={lowEnd} />
           </Suspense>
         </Canvas>
       </div>
+      {isLoaded && showHint && <DragHint />}
     </>
   )
 }

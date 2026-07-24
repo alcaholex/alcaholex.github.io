@@ -58,7 +58,7 @@ export default function Home() {
               {/* Intro */}
               <div>
                 <p className="text-gray-800 text-xl leading-relaxed mb-6">
-                  i&apos;m a high schoolstudent with a passion for design, technology, and engineering.
+                  i&apos;m a high school student with a passion for design, technology, and engineering.
                 </p>
                 <p className="text-gray-600 text-lg leading-relaxed">
                   despite my already wide variety of skills and interests, i am always eager to learn and take on new challenges!
