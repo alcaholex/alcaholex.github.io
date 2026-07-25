@@ -277,7 +277,7 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
           Scrolls with the page. LensShift keeps the name in the first viewport with
           the pivot on the model. Pointer events only while the name is up top, so
           the sections stay interactive once it has scrolled away. */}
-      <div className={`absolute inset-x-0 top-0 h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
+      <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
           dpr={[1, 2]}
