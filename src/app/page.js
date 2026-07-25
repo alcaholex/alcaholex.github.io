@@ -21,7 +21,7 @@ export default function Home() {
                 <h1 className="text-4xl font-medium text-gray-900 mb-4">
                   hello, i&apos;m <span className="font-bold">alex</span>
                 </h1>
-                <div className="w-24 h-1 bg-gray-300"></div>
+                <div className="w-24 h-1 bg-gray-300 mx-auto lg:mx-0"></div>
               </div>
 
               {/* Profile Photo */}
