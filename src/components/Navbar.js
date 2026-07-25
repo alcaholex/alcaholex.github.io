@@ -12,8 +12,9 @@ const navItems = [
 ]
 
 // Box model for the pill's nav links and the row that holds them.
-const ITEM_CLASS = 'px-4 py-2 rounded-full text-sm font-medium'
-const ROW_CLASS = 'flex items-center space-x-6'
+// Tighter on mobile so the bar is thinner; full size from md up.
+const ITEM_CLASS = 'px-3 py-1 md:px-4 md:py-2 rounded-full text-sm font-medium'
+const ROW_CLASS = 'flex items-center space-x-2 md:space-x-6'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -22,6 +23,7 @@ export default function Navbar() {
   // Past the hero the pill collapses to a small arrow; hovering it reveals the nav.
   const [isHovered, setIsHovered] = useState(false)
   const navRef = useRef(null)
+  const wrapperRef = useRef(null)
   const isNavigating = useRef(false)
   const scrollTimeoutRef = useRef(null)
 
@@ -53,6 +55,9 @@ export default function Navbar() {
   }, [isItemActive])
 
   const handleNavClick = (e, item) => {
+    // Collapse the pill after a tap so touch users get the arrow back.
+    setIsHovered(false)
+
     if (item.scrollTo && pathname === '/') {
       e.preventDefault()
 
@@ -145,6 +150,18 @@ export default function Navbar() {
     return () => window.removeEventListener('resize', handleResize)
   }, [updateHighlightPosition])
 
+  // Touch has no mouseleave, so a tap outside the pill collapses it back to the arrow.
+  useEffect(() => {
+    if (!isHovered) return
+    const handlePointerDown = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsHovered(false)
+      }
+    }
+    window.addEventListener('pointerdown', handlePointerDown)
+    return () => window.removeEventListener('pointerdown', handlePointerDown)
+  }, [isHovered])
+
   // Full nav shows in the hero (section-1) or whenever the collapsed handle is
   // hovered; everywhere else it collapses to the little arrow.
   const isHero = activeSection === 'section-1'
@@ -156,6 +173,7 @@ export default function Navbar() {
           pointer events while expanded, so the collapsed arrow (a small child
           that stays interactive) is the only thing blocking clicks up top. */}
       <div
+        ref={wrapperRef}
         onMouseLeave={() => setIsHovered(false)}
         className={`fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6 font-montserrat ${showFull ? 'pointer-events-auto' : 'pointer-events-none'}`}
       >
@@ -164,6 +182,7 @@ export default function Navbar() {
           type="button"
           aria-label="Show navigation"
           onMouseEnter={() => setIsHovered(true)}
+          onClick={() => setIsHovered(true)}
           className={`absolute top-0 left-1/2 -translate-x-1/2 rounded-b-xl px-5 pt-1 pb-1.5 backdrop-blur-xl shadow-lg shadow-black/10 border border-t-0 border-black/15 bg-black/5 transition-all duration-300 ${
             showFull ? 'opacity-0 -translate-y-full pointer-events-none' : 'opacity-100 pointer-events-auto'
           }`}
@@ -180,7 +199,7 @@ export default function Navbar() {
         >
           {/* Glass in the hero; solid white once revealed past it, where it sits
               over content that would otherwise show through. */}
-          <div className={`rounded-full px-6 py-3 shadow-2xl shadow-black/10 border border-black/15 ${isHero ? 'backdrop-blur-xl bg-black/5' : 'bg-white'}`}>
+          <div className={`rounded-full px-4 py-1.5 md:px-6 md:py-3 shadow-2xl shadow-black/10 border border-black/15 ${isHero ? 'backdrop-blur-xl bg-black/5' : 'bg-white'}`}>
             <div className="relative">
               {/* Sliding highlight background */}
               <div
