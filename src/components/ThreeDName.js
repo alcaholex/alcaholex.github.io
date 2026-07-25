@@ -158,6 +158,7 @@ function AutoResetOrbitControls() {
       ref={controlsRef}
       enableZoom={false}
       enablePan={false}
+      rotateSpeed={2}
     />
   )
 }
