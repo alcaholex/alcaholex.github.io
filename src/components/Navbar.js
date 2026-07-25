@@ -13,7 +13,7 @@ const navItems = [
 
 // Box model for the pill's nav links and the row that holds them.
 // Tighter on mobile so the bar is thinner; full size from md up.
-const ITEM_CLASS = 'px-3 py-1 md:px-4 md:py-2 rounded-full text-sm font-medium'
+const ITEM_CLASS = 'px-3 py-2 md:px-4 rounded-full text-sm font-medium'
 const ROW_CLASS = 'flex items-center space-x-2 md:space-x-6'
 
 export default function Navbar() {
@@ -199,7 +199,7 @@ export default function Navbar() {
         >
           {/* Glass in the hero; solid white once revealed past it, where it sits
               over content that would otherwise show through. */}
-          <div className={`rounded-full px-4 py-1.5 md:px-6 md:py-3 shadow-2xl shadow-black/10 border border-black/15 ${isHero ? 'backdrop-blur-xl bg-black/5' : 'bg-white'}`}>
+          <div className={`rounded-full px-4 py-3 md:px-6 shadow-2xl shadow-black/10 border border-black/15 ${isHero ? 'backdrop-blur-xl bg-black/5' : 'bg-white'}`}>
             <div className="relative">
               {/* Sliding highlight background */}
               <div
