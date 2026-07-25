@@ -1,11 +1,11 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls, AdaptiveDpr } from '@react-three/drei'
+import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls } from '@react-three/drei'
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
 
-function Model({ url, onLoad, lowEnd }) {
+function Model({ url, onLoad }) {
   const { scene } = useGLTF(url, true)
   const { viewport } = useThree()
 
@@ -24,13 +24,10 @@ function Model({ url, onLoad, lowEnd }) {
           scale={[2, 2, 2]}
           rotation={[Math.PI / 2, 0, 0]}
         >
-          {/* Desktop keeps drei's defaults: resolution undefined means the
-              transmission FBO matches the full drawing buffer, and samples
-              defaults to 10. Pinning either one downgrades desktop quality. */}
+          {/* drei's defaults: resolution undefined means the transmission FBO
+              matches the full drawing buffer, and samples defaults to 10. */}
           <MeshTransmissionMaterial
-            resolution={lowEnd ? 256 : undefined}
-            samples={lowEnd ? 4 : undefined}
-            backside={!lowEnd}
+            backside={true}
             distortion={0.2}
             thickness={0.5}
             roughness={0}
@@ -121,16 +118,10 @@ function AutoResetOrbitControls() {
     }
   })
 
-  const handleInteraction = () => {
-    setIsResetting(false) // Stop any ongoing reset animation
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-    timeoutRef.current = setTimeout(resetCamera, 1000)
-  }
-
   useEffect(() => {
-    const handleMouseDown = () => {
+    // Pointer events cover mouse, touch and pen; plain mouse events never fire
+    // on touchscreens, so the snap-back timer was never scheduled on phones.
+    const handlePointerDown = () => {
       setIsResetting(false) // Stop any ongoing reset animation
       if (controlsRef.current) {
         // Re-enable damping if it was disabled
@@ -142,16 +133,20 @@ function AutoResetOrbitControls() {
       }
     }
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       timeoutRef.current = setTimeout(resetCamera, 1000)
     }
 
-    window.addEventListener('mousedown', handleMouseDown)
-    window.addEventListener('mouseup', handleMouseUp)
-    
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('pointerup', handlePointerUp)
+    // A cancelled touch (scroll takeover, gesture) fires no pointerup; treat it
+    // the same so the camera still returns home.
+    window.addEventListener('pointercancel', handlePointerUp)
+
     return () => {
-      window.removeEventListener('mousedown', handleMouseDown)
-      window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
@@ -213,23 +208,7 @@ function DragHint() {
   )
 }
 
-// Cheap capability probe. Returns null until it has run on the client, so the
-// Canvas never mounts with the wrong material budget and rebuild it a tick later.
-function useLowEndDevice() {
-  const [lowEnd, setLowEnd] = useState(null)
-
-  useEffect(() => {
-    const coarsePointer = window.matchMedia('(pointer: coarse)').matches
-    const fewCores = (navigator.hardwareConcurrency || 8) <= 4
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    setLowEnd(coarsePointer || fewCores || reducedMotion)
-  }, [])
-
-  return lowEnd
-}
-
 export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
-  const lowEnd = useLowEndDevice()
   const [isLoaded, setIsLoaded] = useState(false)
   const [showHint, setShowHint] = useState(!hasDraggedBefore)
   // The Canvas stays mounted for the whole page; this only toggles whether its
@@ -290,12 +269,6 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // lowEnd is null until the client-side probe runs; hold the loading screen
-  // rather than mount the Canvas with a budget we are about to change.
-  if (lowEnd === null) {
-    return <LoadingScreen />
-  }
-
   return (
     <>
       {!isLoaded && <LoadingScreen />}
@@ -307,7 +280,7 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
       <div className={`absolute inset-x-0 top-0 h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
-          dpr={lowEnd ? [1, 1.5] : [1, 2]}
+          dpr={[1, 2]}
           // Paused (no GPU work) while scrolled out of the hero; the context and
           // loaded model stay alive so scrolling back resumes instantly.
           frameloop={isActive ? 'always' : 'never'}
@@ -323,13 +296,8 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
           <AutoResetOrbitControls />
           <LensShift />
 
-          {/* Low-end only: trades resolution for frame rate under load. Kept off
-              desktop so it can never soften the refraction edges there, and not
-              `pixelated`, which disables smoothing on the upscale. */}
-          {lowEnd && <AdaptiveDpr />}
-
           <Suspense fallback={null}>
-            <Model url={modelPath} onLoad={handleModelLoad} lowEnd={lowEnd} />
+            <Model url={modelPath} onLoad={handleModelLoad} />
           </Suspense>
         </Canvas>
       </div>
