@@ -173,13 +173,8 @@ function LensShift() {
   const { camera, size } = useThree()
 
   useFrame(() => {
-    // Below md the canvas is one viewport tall (see the h-screen md:h-[150vh]
-    // wrapper), so there is nothing to compensate for: zero shear leaves the name
-    // and its pivot (world origin) at the centre of the screen. Desktop keeps the
-    // upward shift that lifts the name into the first viewport of the tall canvas.
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : size.height
-    camera.projectionMatrix.elements[9] = isMobile ? 0 : screenHeight / size.height - 1
+    camera.projectionMatrix.elements[9] = screenHeight / size.height - 1
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert()
   })
 
