@@ -1,3 +1,4 @@
+import ArtTitle from './ArtTitle'
 import { InstagramIcon } from './Icons'
 
 const artworks = [
@@ -72,13 +73,17 @@ const artworks = [
 
 export default function Art() {
   return (
-    <section id="section-4" className="min-h-screen bg-gray-50 flex flex-col justify-start relative z-30" data-navbar-theme="light">
-      <div className="container mx-auto px-4 pt-16 pb-16 max-w-6xl">
+    // id/data-navbar-theme live on the SlideInSection wrapper, which stays in
+    // normal flow while this content is pinned and swiping in.
+    <section className="min-h-screen bg-gray-50 flex flex-col justify-start relative z-30">
+      {/* The 3D word is the heading; the sr-only h1 keeps it in the document for
+          assistive tech and search. It sits outside the container so its canvas
+          spans the full width, which is what makes it match the hero's. */}
+      <h1 className="sr-only">art</h1>
+      <ArtTitle />
+      <div className="container mx-auto px-4 pb-16 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl font-medium text-gray-900 mb-4">
-            art
-          </h1>
           <div className="w-24 h-1 bg-gray-300 mx-auto mb-6"></div>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             some artwork i&apos;ve created:

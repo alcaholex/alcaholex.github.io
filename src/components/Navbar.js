@@ -5,15 +5,15 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLenis } from './SmoothScroll'
 
-// home/about are scroll targets on the home page; projects/art are their own
-// routes. Items without scrollTo are highlighted by pathname instead.
+// Everything lives on the home page again: projects and art swipe in as
+// scroll sections. Hashes let each link also work when landing from another
+// route (e.g. the old /projects/ redirect): navigate home, then the pathname
+// effect below scrolls to the section once it mounts.
 const navItems = [
   { href: '/', label: 'home', scrollTo: 'section-1' },
-  // Hash so it also works from another route: navigates home, then the
-  // pathname effect below scrolls to the about section once it mounts.
   { href: '/#section-2', label: 'about', scrollTo: 'section-2' },
-  { href: '/projects', label: 'projects' },
-  { href: '/art', label: 'art' },
+  { href: '/#section-3', label: 'projects', scrollTo: 'section-3' },
+  { href: '/#section-4', label: 'art', scrollTo: 'section-4' },
 ]
 
 // Box model for the pill's nav links and the row that holds them.
@@ -27,6 +27,9 @@ export default function Navbar() {
   const [highlightStyle, setHighlightStyle] = useState({})
   // Past the hero the pill collapses to a small arrow; hovering it reveals the nav.
   const [isHovered, setIsHovered] = useState(false)
+  // True while one of the 3D title screens is the one in view, which expands the
+  // nav the same way the hero does.
+  const [onTitleScreen, setOnTitleScreen] = useState(false)
   const navRef = useRef(null)
   const wrapperRef = useRef(null)
   const isNavigating = useRef(false)
@@ -52,14 +55,8 @@ export default function Navbar() {
     }
   }, [])
 
-  // trailingSlash is on, so usePathname() returns e.g. "/projects/"; strip the
-  // slash before comparing to the item hrefs ("/projects") or the highlight
-  // drops out on the sub-pages.
-  const normalizePath = (p) => (p !== '/' && p.endsWith('/') ? p.slice(0, -1) : p)
-
   const isItemActive = useCallback((item) => (
-    (item.scrollTo && activeSection === item.scrollTo && normalizePath(pathname) === '/') ||
-    (!item.scrollTo && normalizePath(pathname) === item.href)
+    activeSection === item.scrollTo && pathname === '/'
   ), [activeSection, pathname])
 
   const updateHighlightPosition = useCallback(() => {
@@ -124,14 +121,27 @@ export default function Navbar() {
 
         if (triggerPoint >= sectionTop && triggerPoint <= sectionBottom) {
           const sectionId = section.getAttribute('id')
-          // Runs on every route so the sub-page heroes (also id section-1)
-          // collapse the pill on scroll just like the home page does.
           if (sectionId && !isNavigating.current) {
             setActiveSection(sectionId)
           }
           break
         }
       }
+
+      // Same 10% line, but measured straight off the viewport. scrollY cancels
+      // out of the comparison above, so this is that rule rewritten the only way
+      // that survives a title riding inside a pinned (fixed) section mid-swipe,
+      // where scrollY + rect.top is no longer a document coordinate.
+      const triggerLine = viewportHeight * 0.1
+      let onTitle = false
+      for (const title of document.querySelectorAll('[data-navbar-full]')) {
+        const rect = title.getBoundingClientRect()
+        if (rect.top <= triggerLine && rect.bottom >= triggerLine) {
+          onTitle = true
+          break
+        }
+      }
+      setOnTitleScreen(onTitle)
     }
 
     updateActiveSection()
@@ -170,10 +180,11 @@ export default function Navbar() {
     }
   }, [pathname])
 
-  // After landing on the home page via a hash link (e.g. about from another
-  // route), start at the top (section 1) then smooth-scroll down to the target
-  // so the hero is briefly visible and the descent is animated, not an instant
-  // jump. The about link sets scroll={false} so Next does not pre-jump to it.
+  // After landing on the home page via a hash link (e.g. an old /projects/
+  // redirect), start at the top (section 1) then smooth-scroll down to the
+  // target so the descent — including the swipe-in transitions — is animated,
+  // not an instant jump. Hash links set scroll={false} so Next does not
+  // pre-jump to the anchor.
   useEffect(() => {
     if (pathname !== '/') return
     const hash = window.location.hash.slice(1)
@@ -212,10 +223,11 @@ export default function Navbar() {
     return () => window.removeEventListener('pointerdown', handlePointerDown)
   }, [isHovered])
 
-  // Full nav shows in the hero (section-1) or whenever the collapsed handle is
-  // hovered; everywhere else it collapses to the little arrow.
+  // Full nav shows on any of the three 3D title screens — the hero (section-1)
+  // and the projects/art words — or whenever the collapsed handle is hovered;
+  // everywhere else it collapses to the little arrow.
   const isHero = activeSection === 'section-1'
-  const showFull = isHero || isHovered
+  const showFull = isHero || onTitleScreen || isHovered
 
   return (
     <>

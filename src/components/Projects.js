@@ -1,3 +1,5 @@
+import ProjectsTitle from './ProjectsTitle'
+
 const projects = [
   {
     title: '3D Portfolio Website',
@@ -33,13 +35,17 @@ const projects = [
 
 export default function Projects() {
   return (
-    <section id="section-3" className="min-h-screen bg-gray-50 flex flex-col justify-start relative z-30" data-navbar-theme="light">
-      <div className="container mx-auto px-4 pt-16 pb-16 max-w-6xl">
+    // id/data-navbar-theme live on the SlideInSection wrapper, which stays in
+    // normal flow while this content is pinned and swiping in.
+    <section className="min-h-screen bg-gray-50 flex flex-col justify-start relative z-30">
+      {/* The 3D word is the heading; the sr-only h1 keeps it in the document for
+          assistive tech and search. It sits outside the container so its canvas
+          spans the full width, which is what makes it match the hero's. */}
+      <h1 className="sr-only">projects</h1>
+      <ProjectsTitle />
+      <div className="container mx-auto px-4 pb-16 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl font-medium text-gray-900 mb-4">
-            projects
-          </h1>
           <div className="w-24 h-1 bg-gray-300 mx-auto mb-6"></div>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             some projects i&apos;m proud of:

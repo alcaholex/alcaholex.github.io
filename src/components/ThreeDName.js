@@ -4,6 +4,8 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls } from '@react-three/drei'
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
+import Warmup from './Warmup'
+import { useAssetReady } from './LoadingGate'
 
 function Model({ url, onLoad }) {
   const { scene } = useGLTF(url, true)
@@ -181,17 +183,6 @@ function LensShift() {
   return null
 }
 
-function LoadingScreen() {
-  return (
-    <div className="fixed inset-0 z-30 bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 font-medium">loading...</p>
-      </div>
-    </div>
-  )
-}
-
 // Module-scoped so the hint stays dismissed across the unmount/remount that
 // scrolling past the hero triggers. Resets on a full page load, which is fine.
 let hasDraggedBefore = false
@@ -224,6 +215,9 @@ function ScrollHint({ visible }) {
 }
 
 export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
+  const markReady = useAssetReady('name')
+  // Still tracked locally: it gates the hints, which should not appear over an
+  // empty hero even though the loading screen is now the gate's job.
   const [isLoaded, setIsLoaded] = useState(false)
   const [showHint, setShowHint] = useState(!hasDraggedBefore)
   // The Canvas stays mounted for the whole page; this only toggles whether its
@@ -289,7 +283,6 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
 
   return (
     <>
-      {!isLoaded && <LoadingScreen />}
       {/* Taller than one screen and layered ABOVE the sections (z-40 > z-30) with a
           transparent background, so the name renders over section 2 as it rises.
           Scrolls with the page. LensShift keeps the name in the first viewport with
@@ -316,6 +309,7 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
 
           <Suspense fallback={null}>
             <Model url={modelPath} onLoad={handleModelLoad} />
+            <Warmup onReady={markReady} />
           </Suspense>
         </Canvas>
       </div>

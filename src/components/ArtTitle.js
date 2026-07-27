@@ -4,16 +4,12 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls } from '@react-three/drei'
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
+import Warmup from './Warmup'
+import { useAssetReady } from './LoadingGate'
 
-function Model({ url, onLoad }) {
+function Model({ url }) {
   const { scene } = useGLTF(url, true)
   const { viewport } = useThree()
-
-  useEffect(() => {
-    if (scene && onLoad) {
-      onLoad()
-    }
-  }, [scene, onLoad])
 
   return (
     <Center scale={viewport.width / 8.5}>
@@ -43,6 +39,7 @@ function Model({ url, onLoad }) {
 }
 
 function AutoResetOrbitControls() {
+  const { gl } = useThree()
   const controlsRef = useRef()
   const timeoutRef = useRef()
   const initialSpherical = useRef(new Spherical(11.18, Math.PI / 2 + Math.asin(5/11.18), 0)) // radius, phi, theta for [0,-5,10]
@@ -62,11 +59,11 @@ function AutoResetOrbitControls() {
       if (controlsRef.current.object) {
         controlsRef.current.object.rotation.set(0, 0, 0)
       }
-      
+
       // Reset OrbitControls internal velocity properties
       controlsRef.current.dampingFactor = 1
       controlsRef.current.enableDamping = false
-      
+
       // Get current spherical coordinates
       const currentPos = controlsRef.current.object.position.clone()
       currentPos.sub(controlsRef.current.target)
@@ -80,7 +77,7 @@ function AutoResetOrbitControls() {
   useFrame((state, delta) => {
     if (isResetting && controlsRef.current) {
       resetProgress.current += delta * 5 // Speed of animation
-      
+
       if (resetProgress.current >= 1) {
         // Final position set and stop lerping
         const finalPos = new Vector3().setFromSpherical(initialSpherical.current)
@@ -88,30 +85,30 @@ function AutoResetOrbitControls() {
         controlsRef.current.object.position.copy(finalPos)
         controlsRef.current.target.copy(initialTarget.current)
         controlsRef.current.update()
-        
+
         // Re-enable damping
         controlsRef.current.enableDamping = true
         controlsRef.current.dampingFactor = 0.05
-        
+
         setIsResetting(false)
         return
       }
-      
+
       // Apply easing to the progress
       const easedProgress = easeInOutCubic(resetProgress.current)
-      
+
       // Lerp spherical coordinates with eased progress
       const currentSpherical = new Spherical(
         startSpherical.current.radius + (initialSpherical.current.radius - startSpherical.current.radius) * easedProgress,
         startSpherical.current.phi + (initialSpherical.current.phi - startSpherical.current.phi) * easedProgress,
         startSpherical.current.theta + (initialSpherical.current.theta - startSpherical.current.theta) * easedProgress
       )
-      
+
       // Convert back to position
       const newPos = new Vector3().setFromSpherical(currentSpherical)
       const newTarget = new Vector3().lerpVectors(startTarget.current, initialTarget.current, easedProgress)
       newPos.add(newTarget)
-      
+
       controlsRef.current.object.position.copy(newPos)
       controlsRef.current.target.copy(newTarget)
       controlsRef.current.update()
@@ -119,9 +116,22 @@ function AutoResetOrbitControls() {
   })
 
   useEffect(() => {
-    // Pointer events cover mouse, touch and pen; plain mouse events never fire
-    // on touchscreens, so the snap-back timer was never scheduled on phones.
+    const canvas = gl.domElement
+
+    // OrbitControls sets touch-action:none on the canvas. The hero can afford
+    // that — it is the top of the page — but a full-screen canvas in the middle
+    // of the document would swallow every vertical swipe and leave phone users
+    // unable to scroll past the title. pan-y hands vertical swipes back to the
+    // page while horizontal drags still spin the word.
+    canvas.style.touchAction = 'pan-y'
+
+    let dragging = false
+
+    // Scoped to this canvas rather than the window (the hero's version): the
+    // page carries three of these now, and window listeners would make a click
+    // anywhere schedule a reset on all of them.
     const handlePointerDown = () => {
+      dragging = true
       setIsResetting(false) // Stop any ongoing reset animation
       if (controlsRef.current) {
         // Re-enable damping if it was disabled
@@ -133,25 +143,27 @@ function AutoResetOrbitControls() {
       }
     }
 
+    // The release can land outside the canvas, and a swipe the browser takes
+    // over for scrolling only ever fires pointercancel — both end the drag.
     const handlePointerUp = () => {
+      if (!dragging) return
+      dragging = false
       timeoutRef.current = setTimeout(resetCamera, 1000)
     }
 
-    window.addEventListener('pointerdown', handlePointerDown)
+    canvas.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('pointerup', handlePointerUp)
-    // A cancelled touch (scroll takeover, gesture) fires no pointerup; treat it
-    // the same so the camera still returns home.
     window.addEventListener('pointercancel', handlePointerUp)
 
     return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
+      canvas.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerUp)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [])
+  }, [gl])
 
   return (
     <OrbitControls
@@ -181,128 +193,46 @@ function LensShift() {
   return null
 }
 
-function LoadingScreen() {
-  return (
-    <div className="fixed inset-0 z-30 bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 font-medium">loading...</p>
-      </div>
-    </div>
-  )
-}
-
-// Module-scoped so the hint stays dismissed across the unmount/remount that
-// scrolling past the hero triggers. Resets on a full page load, which is fine.
-let hasDraggedBefore = false
-
-function DragHint() {
-  return (
-    <div className="absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-48">
-      <div className="flex items-center gap-2 text-gray-500 text-base font-medium animate-pulse [animation-duration:3s]">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l-4 5 4 5M16 7l4 5-4 5" />
-        </svg>
-        drag to rotate
-      </div>
-    </div>
-  )
-}
-
-// Bottom-of-hero nudge to keep scrolling. Fades out once the page leaves the top.
-function ScrollHint({ visible }) {
-  return (
-    <div className={`absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="flex flex-col items-center gap-1 text-gray-500">
-        <span className="text-sm font-medium">scroll</span>
-        <svg className="w-5 h-5 animate-bounce [animation-duration:1.5s]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
-  )
-}
-
-// Cloned from ThreeDName. Uses the name.glb placeholder for now — swap modelPath
-// for an art-specific model later.
+// The glass word that heads the art section. The viewport is the hero's, part
+// for part — same canvas box, camera, lens shift, controls and material — so the
+// word lands at exactly the size and angle the name does. Only the model, and
+// the three notes below, differ.
 export default function ArtTitle({ modelPath = "/models/art.glb" }) {
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [showHint, setShowHint] = useState(!hasDraggedBefore)
-  // The Canvas stays mounted for the whole page; this only toggles whether its
-  // render loop runs. Scrolling past the hero pauses it (no GPU work) instead of
-  // tearing down the WebGL context, so scrolling back is instant with no reload.
-  const [isActive, setIsActive] = useState(true)
-  // Drives the scroll indicator: shown only near the very top of the hero.
-  const [nearTop, setNearTop] = useState(true)
-
-  const handleModelLoad = () => {
-    setIsLoaded(true)
-  }
-
-  // Dismiss the hint only on a real drag on the canvas — a plain click or a
-  // drag that starts elsewhere on the page does not count as "rotating".
-  useEffect(() => {
-    if (!showHint) return
-
-    let origin = null
-
-    const handlePointerDown = (e) => {
-      origin = e.target?.tagName === 'CANVAS' ? { x: e.clientX, y: e.clientY } : null
-    }
-    const handlePointerMove = (e) => {
-      if (!origin) return
-      if (Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 12) {
-        hasDraggedBefore = true
-        setShowHint(false)
-      }
-    }
-    const handlePointerUp = () => {
-      origin = null
-    }
-
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-    }
-  }, [showHint])
+  const containerRef = useRef(null)
+  const markReady = useAssetReady('art')
+  // The hero pauses on `scrollY < innerHeight`, which is really "is the page at
+  // the top". That is never true where this sits, so it would freeze the title
+  // permanently; the equivalent test here is whether the title is on screen.
+  // Three transmission canvases in one document is more GPU work than a frame
+  // can carry, so the loop only runs for the one being looked at. The Canvas
+  // itself never unmounts, so scrolling back is instant.
+  const [isActive, setIsActive] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY
-      const viewportHeight = window.innerHeight
-
-      // The name scrolls with the page. Pause the render loop once it has scrolled
-      // off (~one screen); resume when it comes back. Never unmounts, so scrolling
-      // back is instant.
-      setIsActive(scrollPosition < viewportHeight)
-      setNearTop(scrollPosition < 50)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll() // Check initial position
-
-    return () => window.removeEventListener('scroll', handleScroll)
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsActive(entry.isIntersecting),
+      { rootMargin: '150px 0px' }
+    )
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
   }, [])
 
   return (
-    <>
-      {!isLoaded && <LoadingScreen />}
-      {/* Taller than one screen and layered ABOVE the sections (z-40 > z-30) with a
-          transparent background, so the name renders over section 2 as it rises.
-          Scrolls with the page. LensShift keeps the name in the first viewport with
-          the pivot on the model. Pointer events only while the name is up top, so
-          the sections stay interactive once it has scrolled away. */}
+    // Reserves exactly one screen in the flow while the canvas inside keeps the
+    // hero's 150vh box — the aspect is what sets the model's scale, so trimming
+    // it would shrink the word. That extra 50vh is left unclipped on purpose,
+    // exactly as on the hero: layered above the sections (z-40 > z-30) on a
+    // transparent canvas, the word is free to spill over the content below
+    // rather than being cut off at the title's own edge.
+    // data-navbar-full keeps the nav expanded while this screen is the one being
+    // looked at, again matching the hero.
+    <div ref={containerRef} data-navbar-full className="relative w-full h-screen shrink-0">
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
           dpr={[1, 2]}
-          // Paused (no GPU work) while scrolled out of the hero; the context and
-          // loaded model stay alive so scrolling back resumes instantly.
+          // Paused (no GPU work) while scrolled away; the context and loaded
+          // model stay alive so coming back resumes instantly.
           frameloop={isActive ? 'always' : 'never'}
           performance={{ min: 0.8 }}
         >
@@ -312,17 +242,20 @@ export default function ArtTitle({ modelPath = "/models/art.glb" }) {
               <meshBasicMaterial color="#ffffff" side={2} />
             </mesh>
           </Environment>
-          
+
           <AutoResetOrbitControls />
           <LensShift />
 
           <Suspense fallback={null}>
-            <Model url={modelPath} onLoad={handleModelLoad} />
+            <Model url={modelPath} />
+            <Warmup onReady={markReady} />
           </Suspense>
         </Canvas>
       </div>
-      {isActive && isLoaded && showHint && <DragHint />}
-      <ScrollHint visible={isLoaded && nearTop} />
-    </>
+    </div>
   )
 }
+
+// Start the download on import rather than waiting for the canvas to be
+// measured and mounted.
+useGLTF.preload('/models/art.glb')

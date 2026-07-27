@@ -20,6 +20,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-manrope), Helvetica, Arial, sans-serif;
   overscroll-behavior-y: none;
+  /* The swipe-in sections translate horizontally; make sure no intermediate
+     state can ever create sideways scroll. (clip, not hidden, so the body
+     does not become a scroll container.) */
+  overflow-x: clip;
 }
 
 .font-montserrat {
