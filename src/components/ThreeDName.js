@@ -6,6 +6,7 @@ import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
+import ScrollHint from './ScrollHint'
 
 function Model({ url, onLoad }) {
   const { scene } = useGLTF(url, true)
@@ -200,20 +201,6 @@ function DragHint() {
   )
 }
 
-// Bottom-of-hero nudge to keep scrolling. Fades out once the page leaves the top.
-function ScrollHint({ visible }) {
-  return (
-    <div className={`absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="flex flex-col items-center gap-1 text-gray-500">
-        <span className="text-sm font-medium">scroll</span>
-        <svg className="w-5 h-5 animate-bounce [animation-duration:1.5s]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
-  )
-}
-
 export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   const markReady = useAssetReady('name')
   // Still tracked locally: it gates the hints, which should not appear over an
@@ -224,8 +211,6 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   // render loop runs. Scrolling past the hero pauses it (no GPU work) instead of
   // tearing down the WebGL context, so scrolling back is instant with no reload.
   const [isActive, setIsActive] = useState(true)
-  // Drives the scroll indicator: shown only near the very top of the hero.
-  const [nearTop, setNearTop] = useState(true)
 
   const handleModelLoad = () => {
     setIsLoaded(true)
@@ -272,7 +257,6 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
       // off (~one screen); resume when it comes back. Never unmounts, so scrolling
       // back is instant.
       setIsActive(scrollPosition < viewportHeight)
-      setNearTop(scrollPosition < 50)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -314,7 +298,7 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
         </Canvas>
       </div>
       {isActive && isLoaded && showHint && <DragHint />}
-      <ScrollHint visible={isLoaded && nearTop} />
+      <ScrollHint enabled={isLoaded} />
     </>
   )
 }

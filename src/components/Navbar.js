@@ -132,11 +132,18 @@ export default function Navbar() {
       // out of the comparison above, so this is that rule rewritten the only way
       // that survives a title riding inside a pinned (fixed) section mid-swipe,
       // where scrollY + rect.top is no longer a document coordinate.
+      //
+      // The horizontal test is not redundant: a section waiting to swipe in is
+      // already pinned at top 0 and merely held offscreen sideways, so on the
+      // vertical line alone every queued title reads as "on screen" and the nav
+      // would stay open through the section before it.
       const triggerLine = viewportHeight * 0.1
       let onTitle = false
       for (const title of document.querySelectorAll('[data-navbar-full]')) {
         const rect = title.getBoundingClientRect()
-        if (rect.top <= triggerLine && rect.bottom >= triggerLine) {
+        const crossesLine = rect.top <= triggerLine && rect.bottom >= triggerLine
+        const onScreen = rect.left < window.innerWidth && rect.right > 0
+        if (crossesLine && onScreen) {
           onTitle = true
           break
         }

@@ -6,6 +6,7 @@ import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
+import ScrollHint from './ScrollHint'
 
 function Model({ url }) {
   const { scene } = useGLTF(url, true)
@@ -252,6 +253,8 @@ export default function ArtTitle({ modelPath = "/models/art.glb" }) {
           </Suspense>
         </Canvas>
       </div>
+      {/* After the canvas so it layers above it at the same z-40. */}
+      <ScrollHint />
     </div>
   )
 }
