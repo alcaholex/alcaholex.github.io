@@ -16,8 +16,9 @@ const navItems = [
   { href: '/#section-4', label: 'art', scrollTo: 'section-4' },
 ]
 
-// Box model for the pill's nav links and the row that holds them.
-// Tighter on mobile so the bar is thinner; full size from md up.
+// Shared box model so the transparent hit-target links (inside the pill) and
+// the visible blend overlay (at body level) line up exactly. Keep these
+// identical. Tighter on mobile so the bar is thinner; full size from md up.
 const ITEM_CLASS = 'px-3 py-2 md:px-4 rounded-full text-sm font-medium'
 const ROW_CLASS = 'flex items-center space-x-2 md:space-x-6'
 
@@ -256,7 +257,10 @@ export default function Navbar() {
             showFull ? 'opacity-0 -translate-y-full pointer-events-none' : 'opacity-100 pointer-events-auto'
           }`}
         >
-          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          {/* Stroke is transparent — the visible chevron is the blend overlay
+              below, which needs to blend against the page, not this button's
+              backdrop-filter group. */}
+          <svg className="w-4 h-4 text-transparent" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
@@ -293,7 +297,7 @@ export default function Navbar() {
                     // so suppress Next's automatic jump to the anchor.
                     scroll={item.href.includes('#') ? false : undefined}
                     onClick={(e) => handleNavClick(e, item)}
-                    className={`${ITEM_CLASS} text-gray-700 hover:text-gray-400 transition-colors`}
+                    className={`${ITEM_CLASS} text-transparent`}
                   >
                     {item.label}
                   </Link>
@@ -302,6 +306,38 @@ export default function Navbar() {
             </div>
           </div>
         </nav>
+      </div>
+
+      {/* Visible labels — built to match the proven test exactly: a single fixed
+          element (blend group = page root) with mix-blend-difference and text
+          directly on it, and plain padded span children. No nested wrapper, no
+          per-span opacity — an opacity < 1 child makes its own group and breaks
+          the blend, which is what left the text stuck white. Positioned over the
+          pill; the transparent border matches the pill's border for alignment,
+          and pointer-events pass through to the real links beneath. Mirrors the
+          pill's slide and fade so the two never separate. */}
+      <div
+        aria-hidden="true"
+        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[60] pt-6 font-montserrat pointer-events-none text-white mix-blend-difference transition-all duration-300 ${showFull ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'}`}
+      >
+        <div className={`px-4 py-3 md:px-6 border border-transparent ${ROW_CLASS}`}>
+          {navItems.map((item) => (
+            <span key={item.label} className={ITEM_CLASS}>
+              {item.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* The collapsed handle's chevron, same treatment: geometry mirrors the
+          handle button exactly, visible whenever the handle is. */}
+      <div
+        aria-hidden="true"
+        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[60] px-5 pt-1 pb-1.5 border border-t-0 border-transparent pointer-events-none text-white mix-blend-difference transition-all duration-300 ${showFull ? 'opacity-0 -translate-y-full' : 'opacity-100'}`}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
       </div>
     </>
   )
