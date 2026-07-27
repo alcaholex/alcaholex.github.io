@@ -91,6 +91,17 @@ export default function SlideInSection({ id, from = 'right', children }) {
       const wrapper = wrapperRef.current
       if (!wrapper || touching) return
 
+      // Anything still moving gets left alone: a scroll easing out, or a navbar
+      // jump passing through on its way somewhere else. Waiting on scroll
+      // events alone is not enough — once the idle gap is shorter than a frame
+      // the timer fires between them, and snapping mid-flight would hijack a
+      // navigation and strand it here. Re-armed rather than dropped so the
+      // swipe still settles once everything has come to rest.
+      if (lenisRef.current?.isScrolling) {
+        idleTimer = setTimeout(snap, SNAP_IDLE_MS)
+        return
+      }
+
       const top = wrapper.getBoundingClientRect().top
       const p = (window.innerHeight - top) / window.innerHeight
       // Re-checked here because the swipe may have reached an end between the
@@ -102,10 +113,6 @@ export default function SlideInSection({ id, from = 'right', children }) {
       const target =
         window.scrollY + top - (p < SNAP_FORWARD_THRESHOLD ? window.innerHeight : 0)
 
-      // This scroll keeps firing scroll events, which re-arm the idle timer
-      // every frame, so no snap can fire mid-animation. Once it settles the
-      // section is at an end and the next snap returns above — and if the user
-      // scrolls out of it, their own events take over the timer instead.
       if (lenisRef.current) {
         lenisRef.current.scrollTo(target, { duration: SNAP_DURATION_S })
       } else {

@@ -48,10 +48,12 @@ export default function ScrollHint({ enabled = true }) {
   return (
     // Full screen so the button lands at the bottom of this title's own screen,
     // but click-through: only the button itself takes pointer events, leaving
-    // the canvas behind it draggable.
+    // the canvas behind it draggable. dvh rather than vh, because 100vh is the
+    // viewport at its tallest and would drop the button behind a phone's
+    // address bar — and at pb-6 there is no clearance to absorb that.
     <div
       ref={wrapperRef}
-      className={`absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      className={`absolute inset-x-0 top-0 h-[100dvh] z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       {/* Same glass as the navbar pill: the opacity fade is on the ancestor
           here rather than this element, so keep transform-gpu to hold it on its
