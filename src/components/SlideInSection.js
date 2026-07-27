@@ -19,7 +19,8 @@ const GLASS_FILTER = 'blur(4px) saturate(1.4)'
 // How long the arrival fade back to the section's own opaque colour takes.
 const GLASS_FADE_MS = 400
 
-// Swipes its child section in horizontally from the right, driven by scroll.
+// Swipes its child section in horizontally, from the right (default) or the
+// left, driven by scroll.
 // The wrapper div stays in normal flow and reserves the section's height — it
 // also carries the section id, so navbar tracking, anchors and smooth-scroll
 // targets keep working. While the wrapper's top (= the previous section's
@@ -33,7 +34,8 @@ const GLASS_FADE_MS = 400
 //
 // While mid-swipe the panel's background is frosted glass — semi-transparent
 // over a backdrop blur — and fades back to its own opaque colour on arrival.
-export default function SlideInSection({ id, children }) {
+export default function SlideInSection({ id, from = 'right', children }) {
+  const fromLeft = from === 'left'
   const wrapperRef = useRef(null)
   const innerRef = useRef(null)
   const pinnedRef = useRef(false)
@@ -138,11 +140,16 @@ export default function SlideInSection({ id, children }) {
       // every animation frame, so no extra rAF loop is needed.
       if (isPinned) {
         const p = Math.max(0, progress)
-        inner.style.transform = `translateX(${(1 - p) * 100}%)`
+        inner.style.transform = `translateX(${(fromLeft ? -1 : 1) * (1 - p) * 100}%)`
+        // Cast off the leading edge, so it falls on the section being covered:
+        // that is the panel's right edge coming from the left, its left edge
+        // coming from the right.
+        inner.style.boxShadow = p > 0
+          ? `${fromLeft ? '' : '-'}24px 0 48px rgba(0, 0, 0, 0.15)`
+          : 'none'
         // Hidden until actually reached, so the edge shadow cannot bleed in
-        // from the right while the section waits offscreen.
+        // from offscreen while the section waits there.
         inner.style.visibility = p > 0 ? 'visible' : 'hidden'
-        inner.style.boxShadow = p > 0 ? '-24px 0 48px rgba(0, 0, 0, 0.15)' : 'none'
 
         // Frost the panel for the whole sweep: the section's own background
         // drops to half strength over a backdrop blur, so the content it is
@@ -218,7 +225,7 @@ export default function SlideInSection({ id, children }) {
       window.removeEventListener('touchend', onTouchEnd)
       window.removeEventListener('touchcancel', onTouchEnd)
     }
-  }, [])
+  }, [fromLeft])
 
   return (
     <div

@@ -52,10 +52,14 @@ export default function Projects() {
           </p>
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Projects Grid. Lifted above the title's canvas (z-40) inside this
+            section's z-30 stacking context, so the glass word passes behind the
+            cards — and they, not the canvas, take the clicks where the two
+            overlap. Only the cards: the header above keeps its default layer so
+            the word still sweeps over that. */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-50">
           {projects.map((project) => (
-            <div key={project.title} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300">
+            <div key={project.title} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
               <div className="h-48 bg-gray-100 flex items-center justify-center p-4">
                 <img
                   src={project.image}

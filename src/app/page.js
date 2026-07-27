@@ -89,12 +89,13 @@ export default function Home() {
             </div>
           </div>
         </section>
-        {/* Projects and art swipe in from the right once the previous section's
-            bottom is reached; the wrappers carry the ids the navbar targets. */}
+        {/* Projects swipes in from the right and art from the left, once the
+            previous section's bottom is reached; the wrappers carry the ids the
+            navbar targets. */}
         <SlideInSection id="section-3">
           <Projects />
         </SlideInSection>
-        <SlideInSection id="section-4">
+        <SlideInSection id="section-4" from="left">
           <Art />
         </SlideInSection>
       </main>
