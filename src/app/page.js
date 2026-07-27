@@ -1,8 +1,6 @@
 'use client'
 
 import ThreeDModel from '../components/ThreeDName'
-import Projects from '../components/Projects'
-import Art from '../components/Art'
 import { GithubIcon, InstagramIcon, LinkedInIcon } from '../components/Icons'
 
 export default function Home() {
@@ -83,8 +81,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <Projects />
-      <Art />
     </main>
   )
 }

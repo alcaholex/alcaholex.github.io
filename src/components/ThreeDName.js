@@ -198,12 +198,26 @@ let hasDraggedBefore = false
 
 function DragHint() {
   return (
-    <div className="absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-16">
+    <div className="absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-48">
       <div className="flex items-center gap-2 text-gray-500 text-base font-medium animate-pulse [animation-duration:3s]">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l-4 5 4 5M16 7l4 5-4 5" />
         </svg>
         drag to rotate
+      </div>
+    </div>
+  )
+}
+
+// Bottom-of-hero nudge to keep scrolling. Fades out once the page leaves the top.
+function ScrollHint({ visible }) {
+  return (
+    <div className={`absolute inset-x-0 top-0 h-screen z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="flex flex-col items-center gap-1 text-gray-500">
+        <span className="text-sm font-medium">scroll</span>
+        <svg className="w-5 h-5 animate-bounce [animation-duration:1.5s]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
       </div>
     </div>
   )
@@ -216,6 +230,8 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   // render loop runs. Scrolling past the hero pauses it (no GPU work) instead of
   // tearing down the WebGL context, so scrolling back is instant with no reload.
   const [isActive, setIsActive] = useState(true)
+  // Drives the scroll indicator: shown only near the very top of the hero.
+  const [nearTop, setNearTop] = useState(true)
 
   const handleModelLoad = () => {
     setIsLoaded(true)
@@ -262,6 +278,7 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
       // off (~one screen); resume when it comes back. Never unmounts, so scrolling
       // back is instant.
       setIsActive(scrollPosition < viewportHeight)
+      setNearTop(scrollPosition < 50)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -303,6 +320,7 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
         </Canvas>
       </div>
       {isActive && isLoaded && showHint && <DragHint />}
+      <ScrollHint visible={isLoaded && nearTop} />
     </>
   )
 }

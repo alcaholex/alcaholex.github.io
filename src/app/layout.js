@@ -1,6 +1,7 @@
 import { Montserrat, Manrope } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/Navbar";
+import SmoothScroll from "../components/SmoothScroll";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -23,8 +24,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${montserrat.variable} ${manrope.variable} antialiased`}>
-        <Navbar />
-        {children}
+        <SmoothScroll>
+          <Navbar />
+          {children}
+        </SmoothScroll>
       </body>
     </html>
   );

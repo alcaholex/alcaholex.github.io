@@ -3,12 +3,17 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLenis } from './SmoothScroll'
 
+// home/about are scroll targets on the home page; projects/art are their own
+// routes. Items without scrollTo are highlighted by pathname instead.
 const navItems = [
   { href: '/', label: 'home', scrollTo: 'section-1' },
-  { href: '/about', label: 'about', scrollTo: 'section-2' },
-  { href: '/projects', label: 'projects', scrollTo: 'section-3' },
-  { href: '/art', label: 'art', scrollTo: 'section-4' },
+  // Hash so it also works from another route: navigates home, then the
+  // pathname effect below scrolls to the about section once it mounts.
+  { href: '/#section-2', label: 'about', scrollTo: 'section-2' },
+  { href: '/projects', label: 'projects' },
+  { href: '/art', label: 'art' },
 ]
 
 // Box model for the pill's nav links and the row that holds them.
@@ -27,9 +32,34 @@ export default function Navbar() {
   const isNavigating = useRef(false)
   const scrollTimeoutRef = useRef(null)
 
+  // Kept in a ref so scroll handlers/effects can reach the current Lenis instance
+  // without listing it as a dependency (it starts null, then resolves once mounted).
+  const lenis = useLenis()
+  const lenisRef = useRef(null)
+  useEffect(() => {
+    lenisRef.current = lenis
+  }, [lenis])
+
+  // Smooth-scroll to a target (element or offset) through Lenis, falling back to
+  // the native API if Lenis has not mounted yet.
+  const smoothScrollTo = useCallback((target, options) => {
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(target, options)
+    } else if (typeof target !== 'number') {
+      target.scrollIntoView({ behavior: 'smooth' })
+    } else {
+      window.scrollTo(0, target)
+    }
+  }, [])
+
+  // trailingSlash is on, so usePathname() returns e.g. "/projects/"; strip the
+  // slash before comparing to the item hrefs ("/projects") or the highlight
+  // drops out on the sub-pages.
+  const normalizePath = (p) => (p !== '/' && p.endsWith('/') ? p.slice(0, -1) : p)
+
   const isItemActive = useCallback((item) => (
-    (item.scrollTo && activeSection === item.scrollTo && pathname === '/') ||
-    (!item.scrollTo && pathname === item.href)
+    (item.scrollTo && activeSection === item.scrollTo && normalizePath(pathname) === '/') ||
+    (!item.scrollTo && normalizePath(pathname) === item.href)
   ), [activeSection, pathname])
 
   const updateHighlightPosition = useCallback(() => {
@@ -72,7 +102,7 @@ export default function Navbar() {
 
       const section = document.getElementById(item.scrollTo)
       if (section) {
-        section.scrollIntoView({ behavior: 'smooth' })
+        smoothScrollTo(section)
       }
     }
   }
@@ -94,7 +124,9 @@ export default function Navbar() {
 
         if (triggerPoint >= sectionTop && triggerPoint <= sectionBottom) {
           const sectionId = section.getAttribute('id')
-          if (sectionId && pathname === '/' && !isNavigating.current) {
+          // Runs on every route so the sub-page heroes (also id section-1)
+          // collapse the pill on scroll just like the home page does.
+          if (sectionId && !isNavigating.current) {
             setActiveSection(sectionId)
           }
           break
@@ -137,6 +169,24 @@ export default function Navbar() {
       }
     }
   }, [pathname])
+
+  // After landing on the home page via a hash link (e.g. about from another
+  // route), start at the top (section 1) then smooth-scroll down to the target
+  // so the hero is briefly visible and the descent is animated, not an instant
+  // jump. The about link sets scroll={false} so Next does not pre-jump to it.
+  useEffect(() => {
+    if (pathname !== '/') return
+    const hash = window.location.hash.slice(1)
+    if (!hash) return
+    // Highlight the target section right away and lock it so the descent past
+    // section 1 doesn't flash the "home" highlight on the way down.
+    isNavigating.current = true
+    setActiveSection(hash)
+    // Jump to the top instantly, then glide down so the descent is visible.
+    smoothScrollTo(0, { immediate: true })
+    const el = document.getElementById(hash)
+    if (el) smoothScrollTo(el)
+  }, [pathname, smoothScrollTo])
 
   // Update highlight position when active section or pathname changes
   useEffect(() => {
@@ -183,7 +233,7 @@ export default function Navbar() {
           aria-label="Show navigation"
           onMouseEnter={() => setIsHovered(true)}
           onClick={() => setIsHovered(true)}
-          className={`absolute top-0 left-1/2 -translate-x-1/2 rounded-b-xl px-5 pt-1 pb-1.5 backdrop-blur-xl shadow-lg shadow-black/10 border border-t-0 border-black/15 bg-black/5 transition-all duration-300 ${
+          className={`absolute top-0 left-1/2 -translate-x-1/2 rounded-b-xl px-5 pt-1 pb-1.5 backdrop-blur-xl shadow-lg shadow-black/10 border border-t-0 border-black/15 bg-black/5 transform-gpu transition-all duration-300 ${
             showFull ? 'opacity-0 -translate-y-full pointer-events-none' : 'opacity-100 pointer-events-auto'
           }`}
         >
@@ -192,14 +242,18 @@ export default function Navbar() {
           </svg>
         </button>
 
-        {/* The pill: layout, click targets, and visible labels. */}
+        {/* The pill: layout, click targets, and visible labels. The nav only
+            slides; the opacity fade lives on the glass pill below. */}
         <nav
           onMouseEnter={() => setIsHovered(true)}
-          className={`transition-all duration-300 ${showFull ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}`}
+          className={`transition-transform duration-300 ${showFull ? 'translate-y-0' : '-translate-y-3'}`}
         >
-          {/* Glass in the hero; solid white once revealed past it, where it sits
-              over content that would otherwise show through. */}
-          <div className={`rounded-full px-4 py-3 md:px-6 shadow-2xl shadow-black/10 border border-black/15 ${isHero ? 'backdrop-blur-xl bg-black/5' : 'bg-white'}`}>
+          {/* Always the same frosted glass as the collapsed chevron handle. The
+              opacity fade is applied HERE, on the backdrop-filter element itself,
+              rather than on an ancestor — an ancestor's fractional opacity
+              flattens the backdrop-filter into a group and drops it behind the
+              page. transform-gpu keeps it on its own compositing layer. */}
+          <div className={`rounded-full px-4 py-3 md:px-6 shadow-2xl shadow-black/10 border border-black/15 backdrop-blur-xl bg-black/5 transform-gpu transition-opacity duration-300 ${showFull ? 'opacity-100' : 'opacity-0'}`}>
             <div className="relative">
               {/* Sliding highlight background */}
               <div
@@ -214,8 +268,11 @@ export default function Navbar() {
               <div className={`${ROW_CLASS} relative z-10`} ref={navRef}>
                 {navItems.map((item) => (
                   <Link
-                    key={item.href}
+                    key={item.label}
                     href={item.href}
+                    // Hash links manage their own scroll (top first, then down),
+                    // so suppress Next's automatic jump to the anchor.
+                    scroll={item.href.includes('#') ? false : undefined}
                     onClick={(e) => handleNavClick(e, item)}
                     className={`${ITEM_CLASS} text-gray-700 hover:text-gray-400 transition-colors`}
                   >
