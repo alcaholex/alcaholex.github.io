@@ -85,6 +85,24 @@ export function unlock() {
   ensure(true)
 }
 
+// First-gesture unlock, page-wide. The per-component unlocks are not enough
+// on mobile: the title canvases are touch-action pan-y, so the browser takes
+// any vertical drag for scrolling and fires pointercancel — no release, no
+// activation, no audio permission from that gesture at all. Any COMPLETED
+// tap anywhere on the page arms audio instead; the listeners retry until it
+// sticks, then remove themselves.
+if (typeof window !== 'undefined') {
+  const firstGesture = () => {
+    ensure(true)
+    if (ctx && ctx.state === 'running') {
+      window.removeEventListener('pointerup', firstGesture, true)
+      window.removeEventListener('keydown', firstGesture, true)
+    }
+  }
+  window.addEventListener('pointerup', firstGesture, true)
+  window.addEventListener('keydown', firstGesture, true)
+}
+
 let reverbV = null
 function reverbIn() {
   if (!reverbV) {
