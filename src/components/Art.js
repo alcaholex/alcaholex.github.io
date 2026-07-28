@@ -344,7 +344,7 @@ export default function Art() {
           blender files always open with a &quot;default cube&quot;.
         </p>
         <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-          so i&apos;ve sculpted mountains out of a cube? 
+          reminder that everything below derives from that cube:
         </p>
       </div>
 

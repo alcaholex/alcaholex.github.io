@@ -92,8 +92,7 @@ export default function Projects() {
         {/* Placeholder copy — replace when there is more to say. Left at the
             default layer on purpose, so the glass word still sweeps over it. */}
         <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-          i build things for myself. whether it be a game, a
-          piece of tech, or a work of art, i&apos;m in it for the making.
+          i love building. i notice that the more effort i invest in a project, the more fulfilling it is to complete. they&apos;re like brainchildren.
         </p>
         <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
           the &quot;departures&quot; list below is a record of the things i&apos;ve made... all aboard!
