@@ -65,7 +65,7 @@ const NODES = [
     body: 'we took provincials as underdogs. no school and no organization behind us, just an independent team up against some of the best in the world. it sent us to the world championship, and it is still the result i am proudest of.' },
   // sw, reading in from the lower-left: its ne ray would run back up the
   // fork into the cad interchange.
-  { id: 'more', year: '2026', title: 'more engineering projects', labelSide: 'se', shift: { x: 5, y: -1 },
+  { id: 'more', year: '2026', title: 'more engineering projects', labelSide: 'ne', shift: { x: 5, y: -1 },
     body: 'there is always something half-built on my desk. this stop is deliberately open-ended.' },
   { id: 'itch', year: '2021', title: 'itch publishing', labelSide: 'sw',
     body: 'itch.io meant i could put things in front of real people without waiting for permission from anyone. i have been posting there ever since.' },
@@ -73,7 +73,7 @@ const NODES = [
     body: 'tutorial after tutorial, until one day i was making my own low-poly models instead of copying someone else. that is the moment a hobby stops being a hobby.' },
   // se: its sw ray would lie across the blue trunk just below the
   // blender1 interchange.
-  { id: 'blender2', year: '2024', title: 'posting art in blender', labelSide: 'se', shift: { x: 1, y: -3 },
+  { id: 'blender2', year: '2024', title: 'posting art in blender', labelSide: 'ne', shift: { x: 1, y: -3 },
     body: 'starting high school, i made an instagram account and began putting my work where my friends could see it. having an audience, even a small one, made me improve much faster.' },
 ]
 
@@ -118,10 +118,10 @@ const homeLineOf = (id) => {
   return through(verticals) || verticals[0] || through(lines) || lines[0]
 }
 
-// Station grammar, sized against the thick ribbons: an ordinary stop is a
-// small white circle punched into the line; an interchange is a bigger
-// white disc with a thin ink outline; a terminus the same, ringed in its
-// line's colour.
+// Station grammar, in Mini Metro's mounted style: every station is a chunky
+// white circle with a thick ink outline sitting ON the ribbons rather than
+// punched into them. Size is the only differentiator — interchanges largest,
+// termini next, ordinary stops smallest.
 const STATION_META = new Map(
   NODES.map((n) => {
     const lines = STATION_LINES.get(n.id)
@@ -136,8 +136,7 @@ const STATION_META = new Map(
       {
         interchange,
         terminus,
-        color: home ? home.color : '#9ca3af',
-        size: interchange ? 15 : terminus ? 11 : 5,
+        size: interchange ? 19 : terminus ? 15 : 13,
         side: n.labelSide || 'ne',
         nudge: n.labelNudge || [0, 0],
       },
@@ -752,6 +751,14 @@ const VISCOSITY = 8
 // A hard flick can hand the map a huge starting velocity; cap it so the
 // drift never carries a station across the chart.
 const MAX_RELEASE_VELOCITY = 600
+// How much stretch reaches the instrument's top note, in px of the
+// station's own (rubber-eased) offset. The rubber curve approaches MAX_DRAG
+// asymptotically, so 320 eased px takes roughly 900px of pointer travel —
+// the top of the ladder is reserved for a genuinely full-arm pull. Capped
+// against the viewport so a phone, with far less arm available, can still
+// reach the top note with a full-screen drag.
+const stretchFull = () =>
+  Math.min(320, (typeof window === 'undefined' ? 800 : window.innerHeight) * 0.4)
 
 // Renders a route as a polyline with rounded bends.
 function beckPath(pts) {
@@ -965,7 +972,7 @@ export default function FlowTimeline() {
           // The stretch previews the instrument: same normalization as the
           // release pluck, so the last dot heard is the note the letting-go
           // will land on. The module only sounds when a rung is crossed.
-          sfx.stretchTo(Math.hypot(m.x, m.y) / 260)
+          sfx.stretchTo(Math.hypot(m.x, m.y) / stretchFull())
           return
         }
         // A station that also serves a line outside the live set holds
@@ -1124,13 +1131,20 @@ export default function FlowTimeline() {
     }
     startLoop()
 
-    // A press that never became a drag is a click.
+    // A press that never became a drag is a click: it opens the modal on
+    // the instrument's lowest note — strength 0 is the bottom of the same
+    // ladder the drags play, so a plain click is the root the stretches
+    // rise from.
     if (m.moved < CLICK_SLOP) {
+      sfx.snap(0)
+      // The modal's step buttons climb from wherever the cursor is; a fresh
+      // open starts them from the root just played.
+      sfx.pluckReset()
       openModal(NODE_BY_ID.get(id))
     } else {
       // The pluck's pitch and weight scale with how far the elastic was
       // stretched at release, plus a little of the flick speed.
-      sfx.snap(Math.min(1, (Math.hypot(m.x, m.y) + 0.06 * Math.hypot(m.vx, m.vy)) / 260))
+      sfx.snap(Math.min(1, (Math.hypot(m.x, m.y) + 0.06 * Math.hypot(m.vx, m.vy)) / stretchFull()))
     }
   }
 
@@ -1172,9 +1186,9 @@ export default function FlowTimeline() {
       {/* Deliberately double the mt-10 rhythm of the subtitles above: the
           map is a different kind of content, and the extra air sets it
           apart from the text sections. */}
-      <h2 className="mt-20 text-sm font-medium text-gray-900">metro map</h2>
+      <h2 className="mt-20 text-sm font-medium text-gray-900 dark:text-gray-100">metro map</h2>
 
-      <p className="mt-4 text-sm leading-relaxed text-gray-500">
+      <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
         click on a station to view more... or just drag them around for fun :)
       </p>
 
@@ -1185,17 +1199,17 @@ export default function FlowTimeline() {
           role="switch"
           aria-checked={labelsOn}
           onClick={() => setLabelsOn((v) => !v)}
-          className="flex items-center gap-2 text-[11px] text-gray-500 transition-colors hover:text-gray-800"
+          className="flex items-center gap-2 text-[11px] text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
         >
           labels
           {/* Track and knob sized so the knob's travel is exactly the
               track's free run: 24 − 10 − 2·2 inset = 10px. */}
           <span
             aria-hidden="true"
-            className={`relative h-3.5 w-6 rounded-full transition-colors duration-200 ${labelsOn ? 'bg-gray-700' : 'bg-gray-300'}`}
+            className={`relative h-3.5 w-6 rounded-full transition-colors duration-200 ${labelsOn ? 'bg-gray-700 dark:bg-gray-300' : 'bg-gray-300 dark:bg-gray-700'}`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 h-2.5 w-2.5 rounded-full bg-white transition-transform duration-200 ${labelsOn ? 'translate-x-2.5' : ''}`}
+              className={`absolute top-0.5 left-0.5 h-2.5 w-2.5 rounded-full bg-white transition-transform duration-200 dark:bg-gray-950 ${labelsOn ? 'translate-x-2.5' : ''}`}
             />
           </span>
         </button>
@@ -1269,29 +1283,28 @@ export default function FlowTimeline() {
                 className="absolute"
                 style={{ inset: (meta.size - HIT_SIZE) / 2 }}
               />
-              {/* An ordinary stop is a bare white circle inside the ribbon;
-                  interchanges and termini are larger discs with a thin
-                  outline — ink for interchanges, line colour for termini. */}
-              <span
-                className="block rounded-full bg-white transition-transform duration-100 ease-in-out group-hover:scale-110"
-                style={{
-                  width: meta.size,
-                  height: meta.size,
-                  border: meta.interchange
-                    ? '1.5px solid #111827'
-                    : meta.terminus
-                      ? `1.5px solid ${meta.color}`
-                      : 'none',
-                }}
-              />
+              {/* Mounted Mini Metro circle: white fill, thick ink stroke.
+                  Stroke width lives in viewBox units, so every size keeps
+                  the same chunky ~14%-of-diameter weight. */}
+              <svg
+                aria-hidden="true"
+                width={meta.size}
+                height={meta.size}
+                viewBox="0 0 24 24"
+                className="block transition-transform duration-100 ease-in-out group-hover:scale-110"
+              >
+                <circle cx="12" cy="12" r="8.5" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3.4" />
+              </svg>
               {/* One line of angled type, haloed by a soft chip so a name
                   stays legible on the rare occasion a ribbon passes under
                   it — the same trick as a map's white label halos. While
                   shown it is part of the station's hit target (pointer
                   events bubble to the wrapper); hidden, it must not keep
                   catching clicks it no longer advertises. */}
+              {/* Smaller on phones: the map scales down with the column but
+                  type does not, so full-size names crowd the tighter grid. */}
               <span
-                className={`absolute whitespace-nowrap rounded-sm bg-gray-50/85 px-1 text-[9px] font-medium leading-tight text-gray-600 transition-opacity duration-300 ${labelsOn ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+                className={`absolute whitespace-nowrap rounded-sm bg-gray-50/85 px-0.5 text-[7px] font-medium leading-tight text-gray-600 transition-opacity duration-300 dark:bg-gray-950/85 dark:text-gray-300 sm:px-1 sm:text-[9px] ${labelsOn ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                 style={labelStyle(meta.side, meta.nudge)}
               >
                 {node.title}
@@ -1324,71 +1337,96 @@ export default function FlowTimeline() {
               </svg>
             </button>
 
+            {/* Mini Metro's UI is flat paper: a plain white card, ink type,
+                and the network's own geometry doing the decorating — no
+                glass, no blur, no hairline borders. */}
             <div
               role="dialog"
               aria-modal="true"
               aria-label={active.title}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl border border-black/15 bg-gray-50/90 p-5 shadow-xl backdrop-blur-xl"
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-sm font-medium text-gray-900">{active.title}</h3>
-                <span className="text-[10px] uppercase tracking-[0.05em] text-gray-400 shrink-0">{active.year}</span>
+              {/* The station's own map icon leads the header, so the card
+                  reads as that station opened up. */}
+              <div className="flex items-center gap-3">
+                <svg
+                  aria-hidden="true"
+                  width={STATION_META.get(active.id).interchange ? 24 : 20}
+                  height={STATION_META.get(active.id).interchange ? 24 : 20}
+                  viewBox="0 0 24 24"
+                  className="shrink-0"
+                >
+                  <circle cx="12" cy="12" r="8.5" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3.4" />
+                </svg>
+                <h3 className="min-w-0 truncate text-base font-semibold text-gray-900 dark:text-gray-100">{active.title}</h3>
+                <span className="ml-auto shrink-0 text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">{active.year}</span>
               </div>
-              {/* Which line(s) this station sits on: one ribbon-coloured
-                  bar, split evenly at a junction — halves for two lines,
-                  thirds for three. */}
-              <div className="mt-3 flex h-1.5 overflow-hidden rounded-full" aria-hidden="true">
+              {/* The station's line(s) as the game would draw them: one
+                  thick rounded bar per line, side by side with a breath of
+                  air between — route ribbons, not a gradient strip. */}
+              <div className="mt-4 flex gap-1.5" aria-hidden="true">
                 {servedLines.map((l) => (
-                  <span key={l.id} className="h-full flex-1" style={{ backgroundColor: l.color }} />
+                  <span key={l.id} className="h-[7px] flex-1 rounded-full" style={{ backgroundColor: l.color }} />
                 ))}
               </div>
               {active.image && (
                 <img
                   src={active.image}
                   alt={active.title}
-                  className="mt-3 w-full rounded-lg border border-black/10 object-cover"
+                  className="mt-4 w-full rounded-xl object-cover"
                 />
               )}
               {active.body && (
-                <p className="mt-3 text-sm leading-relaxed text-gray-500">{active.body}</p>
+                <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{active.body}</p>
               )}
               {/* Ride the routes from inside the dialog: every previous
                   stop on the left, every next stop on the right, one
-                  button per line at a junction, each chip in the colour of
-                  the line travelled. Swapping `active` keeps the backdrop
-                  up and just replaces the panel's content. */}
+                  button per line at a junction, each carrying a stub of
+                  the line travelled at full ribbon weight. Swapping
+                  `active` keeps the backdrop up and just replaces the
+                  panel's content. */}
               {(steps.back.length > 0 || steps.next.length > 0) && (
-                <div className="mt-4 flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 flex-col items-start gap-1.5">
+                <div className="mt-5 flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 flex-col items-start gap-2">
                     {steps.back.map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => openModal(NODE_BY_ID.get(s.id))}
-                        className="flex max-w-full items-center gap-1.5 text-[11px] text-gray-500 transition-colors hover:text-gray-900"
+                        onClick={() => {
+                          // Backward rides the scale down, wrapping to the
+                          // top note below the root.
+                          sfx.pluckStep(-1)
+                          openModal(NODE_BY_ID.get(s.id))
+                        }}
+                        className="flex max-w-full items-center gap-2 text-[11px] font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                       >
                         <span
                           aria-hidden="true"
-                          className="h-[5px] w-3 shrink-0 rounded-full"
+                          className="h-[7px] w-4 shrink-0 rounded-full"
                           style={{ backgroundColor: s.line.color }}
                         />
                         <span className="truncate">← {NODE_BY_ID.get(s.id).title}</span>
                       </button>
                     ))}
                   </div>
-                  <div className="flex min-w-0 flex-col items-end gap-1.5">
+                  <div className="flex min-w-0 flex-col items-end gap-2">
                     {steps.next.map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => openModal(NODE_BY_ID.get(s.id))}
-                        className="flex max-w-full items-center gap-1.5 text-[11px] text-gray-500 transition-colors hover:text-gray-900"
+                        onClick={() => {
+                          // Forward rides the scale up, wrapping back to the
+                          // root past the top note.
+                          sfx.pluckStep(1)
+                          openModal(NODE_BY_ID.get(s.id))
+                        }}
+                        className="flex max-w-full items-center gap-2 text-[11px] font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                       >
                         <span className="truncate">{NODE_BY_ID.get(s.id).title} →</span>
                         <span
                           aria-hidden="true"
-                          className="h-[5px] w-3 shrink-0 rounded-full"
+                          className="h-[7px] w-4 shrink-0 rounded-full"
                           style={{ backgroundColor: s.line.color }}
                         />
                       </button>

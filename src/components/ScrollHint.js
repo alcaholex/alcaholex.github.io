@@ -20,7 +20,13 @@ export default function ScrollHint({ enabled = true }) {
     const update = () => {
       const wrapper = wrapperRef.current
       if (!wrapper) return
-      setAtTop(Math.abs(wrapper.getBoundingClientRect().top) < 50)
+      const top = wrapper.getBoundingClientRect().top
+      // Visible from the moment this title screen is the one on top until
+      // the content below it has scrolled 30% of a viewport into view — the
+      // nudge should survive the start of the scroll it asked for, not
+      // vanish at the first pixel. (It rides its own screen out of view, so
+      // by -30% it is already low on the page; the fade finishes the job.)
+      setAtTop(top < 50 && top > -0.3 * window.innerHeight)
     }
 
     update()
@@ -61,7 +67,7 @@ export default function ScrollHint({ enabled = true }) {
         type="button"
         onClick={scrollOn}
         aria-label="Scroll to the next section"
-        className={`flex items-center justify-center p-2.5 text-gray-400 transition-colors duration-300 hover:text-gray-900 ${visible ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        className={`flex items-center justify-center p-2.5 text-gray-400 transition-colors duration-300 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100 ${visible ? 'pointer-events-auto' : 'pointer-events-none'}`}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

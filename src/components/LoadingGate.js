@@ -101,7 +101,7 @@ export default function LoadingGate({ children }) {
         // wherever the gate itself sits in the tree.
         <div
           aria-hidden={isDone}
-          className={`fixed inset-0 z-[100] bg-gray-50 flex items-center justify-center transition-transform duration-700 ease-in-out will-change-transform ${
+          className={`fixed inset-0 z-[100] bg-gray-50 dark:bg-gray-950 flex items-center justify-center transition-transform duration-700 ease-in-out will-change-transform ${
             arrived ? '-translate-y-full pointer-events-none' : 'translate-y-0'
           }`}
         >
@@ -116,10 +116,10 @@ export default function LoadingGate({ children }) {
                 snapping. */}
             <div
               aria-hidden="true"
-              className="h-2 w-[min(80vw,360px)] overflow-hidden rounded-full bg-gray-200"
+              className="h-2 w-[min(80vw,360px)] overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800"
             >
               <div
-                className="h-full w-full origin-left rounded-full bg-gray-400"
+                className="h-full w-full origin-left rounded-full bg-gray-400 dark:bg-gray-600"
                 style={{
                   transform: `scaleX(${isDone ? 1 : creeping ? CREEP_TARGET : 0})`,
                   transitionProperty: 'transform',

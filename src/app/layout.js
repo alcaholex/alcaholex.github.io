@@ -46,8 +46,21 @@ export default function RootLayout({ children }) {
     // The font variable goes on <html>, not <body>: globals.css builds
     // --font-stack on :root, and a var() reference resolves against the element
     // it is declared on — so --font-display has to exist by then.
-    <html lang="en" className={`${fallback.variable} ${navFont.variable}`}>
+    // suppressHydrationWarning: the inline script below may add `dark` to this
+    // element before React hydrates, and that difference is intentional.
+    <html lang="en" className={`${fallback.variable} ${navFont.variable}`} suppressHydrationWarning>
       <body className="antialiased">
+        {/* A saved theme choice is restored BEFORE first paint, so a
+            returning dark-mode visitor never sees a light flash. Default is
+            light: no saved choice means no class. try/catch because
+            localStorage throws in some private-browsing modes, and the site
+            should fall back to light rather than crash the boot script. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(localStorage.theme==='dark')document.documentElement.classList.add('dark')}catch(e){}",
+          }}
+        />
         <SmoothScroll>
           <Navbar />
           {children}

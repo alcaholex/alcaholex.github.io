@@ -330,7 +330,7 @@ export default function Art() {
   return (
     // id/data-navbar-theme live on the SlideInSection wrapper, which stays in
     // normal flow while this content is pinned and swiping in.
-    <section className="min-h-screen bg-gray-50 flex flex-col justify-start relative z-30">
+    <section className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col justify-start relative z-30">
       {/* The 3D word is the heading; the sr-only h1 keeps it in the document for
           assistive tech and search. It sits outside the container so its canvas
           spans the full width, which is what makes it match the hero's. */}
@@ -340,10 +340,10 @@ export default function Art() {
       {/* The same quiet register as the other sections' intros. Left at the
           default layer on purpose, so the glass word still sweeps over it. */}
       <div className="mx-auto w-full max-w-[560px] px-6">
-        <p className="text-sm leading-relaxed text-gray-500">
+        <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
           blender files always open with a &quot;default cube&quot;.
         </p>
-        <p className="mt-4 text-sm leading-relaxed text-gray-500">
+        <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
           so i&apos;ve sculpted mountains out of a cube? 
         </p>
       </div>
@@ -362,7 +362,7 @@ export default function Art() {
                     scale so the card pops. Driven off the group rather than its
                     own :hover so the whole card area is the trigger. */}
                 <div className="bg-transparent rounded-xl overflow-hidden shadow-sm group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-300">
-                  <div className="relative aspect-[9/16] bg-gray-100">
+                  <div className="relative aspect-[9/16] bg-gray-100 dark:bg-gray-900">
                     <img
                       src={art.image}
                       alt={art.alt}

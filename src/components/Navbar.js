@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLenis } from './SmoothScroll'
+import * as sfx from './sound'
 
 // The stops on the line, in the order you ride them. Everything lives on the
 // home page: projects and art swipe in as scroll sections. Hashes let each link
@@ -45,6 +46,41 @@ export default function Navbar() {
   const [activeSection, setActiveSection] = useState('section-1')
   const isNavigating = useRef(false)
   const scrollTimeoutRef = useRef(null)
+  // The two controls flanking the strip. Sound defaults on; the theme
+  // defaults to light, but a saved choice survives between sessions — the
+  // pre-paint script in layout.js restores the class, and this sync picks
+  // it up so the button agrees with what the page is already wearing.
+  const [muted, setMuted] = useState(false)
+  const [dark, setDark] = useState(false)
+  const themeFadeTimer = useRef(0)
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains('dark'))
+  }, [])
+  const toggleMute = () => {
+    setMuted((m) => {
+      sfx.setMuted(!m)
+      return !m
+    })
+  }
+  const toggleTheme = () => {
+    setDark((d) => {
+      const root = document.documentElement
+      // The whole page cross-fades between palettes: theme-fading turns on
+      // colour transitions everywhere for just this window (globals.css).
+      // Timer-cleared rather than fixed so spamming the switch keeps the
+      // fade window open instead of cutting it mid-glide.
+      root.classList.add('theme-fading')
+      clearTimeout(themeFadeTimer.current)
+      themeFadeTimer.current = setTimeout(() => root.classList.remove('theme-fading'), 420)
+      root.classList.toggle('dark', !d)
+      try {
+        localStorage.setItem('theme', !d ? 'dark' : 'light')
+      } catch {
+        /* private mode; the choice just does not persist */
+      }
+      return !d
+    })
+  }
 
   // Kept in a ref so scroll handlers/effects can reach the current Lenis
   // instance without listing it as a dependency (it starts null, then resolves
@@ -56,10 +92,13 @@ export default function Navbar() {
   }, [lenis])
 
   // Smooth-scroll to a target (element or offset) through Lenis, falling back to
-  // the native API if Lenis has not mounted yet.
+  // the native API if Lenis has not mounted yet. The userData tag rides on
+  // Lenis for the whole travel, and is how SlideInSection knows a scroll
+  // passing through its swipe region is a navigation to somewhere else —
+  // not a swipe to commit and not a chord to play.
   const smoothScrollTo = useCallback((target, options) => {
     if (lenisRef.current) {
-      lenisRef.current.scrollTo(target, options)
+      lenisRef.current.scrollTo(target, { userData: { nav: true }, ...options })
     } else if (typeof target !== 'number') {
       target.scrollIntoView({ behavior: 'smooth' })
     } else {
@@ -92,6 +131,10 @@ export default function Navbar() {
     isNavigating.current = true
     setActiveSection(item.scrollTo)
 
+    // The departure chord — the one navbar sound there is. A click is a
+    // gesture, so this is also allowed to unlock audio.
+    sfx.navTo(navItems.indexOf(item), true)
+
     const section = document.getElementById(item.scrollTo)
     if (section) smoothScrollTo(section)
   }
@@ -113,6 +156,8 @@ export default function Navbar() {
         const el = document.getElementById(item.scrollTo)
         if (el && el.getBoundingClientRect().top <= trigger) current = item.scrollTo
       }
+      // Deliberately silent: only a click on the strip plays a chord.
+      // Scroll-driven arrivals just move the marker.
       setActiveSection(current)
     }
 
@@ -211,12 +256,53 @@ export default function Navbar() {
             height: DIAGRAM_H,
           }}
         >
+        {/* Mute, hanging off the strip's left end. Bare mark like the site's
+            other controls; a gesture, so it can also unlock audio. */}
+        <button
+          type="button"
+          aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+          aria-pressed={muted}
+          onClick={toggleMute}
+          className="absolute -left-12 -translate-y-1/2 p-2 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
+          style={{ top: DOT_BAND / 2 }}
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z" />
+            {muted ? (
+              <path strokeLinecap="round" d="M15 9.5l5 5M20 9.5l-5 5" />
+            ) : (
+              <path strokeLinecap="round" d="M15 9a4.2 4.2 0 0 1 0 6M17.5 6.8a7.6 7.6 0 0 1 0 10.4" />
+            )}
+          </svg>
+        </button>
+        {/* Theme, hanging off the right end. Two-state; the default came
+            from the system before first paint. */}
+        <button
+          type="button"
+          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-pressed={dark}
+          onClick={toggleTheme}
+          className="absolute -right-12 -translate-y-1/2 p-2 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
+          style={{ top: DOT_BAND / 2 }}
+        >
+          {dark ? (
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="4" />
+              <path strokeLinecap="round" d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />
+            </svg>
+          )}
+        </button>
+
         {/* Track ahead, in the faint grey of a line not yet ridden. It runs
             station to station, so it stops at the terminals instead of trailing
             off past them. */}
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 h-[1.5px] -translate-y-1/2 rounded-full bg-gray-300"
+          className="absolute inset-x-0 h-[1.5px] -translate-y-1/2 rounded-full bg-gray-300 dark:bg-gray-700"
           style={{ top: DOT_BAND / 2 }}
         />
         {/* Track behind: the same line in ink, growing across to the stop you
@@ -224,7 +310,7 @@ export default function Navbar() {
             after you do reads as travel rather than as a state change. */}
         <span
           aria-hidden="true"
-          className="absolute left-0 h-[1.5px] -translate-y-1/2 rounded-full bg-gray-900 transition-all duration-500 ease-out"
+          className="absolute left-0 h-[1.5px] -translate-y-1/2 rounded-full bg-gray-900 transition-all duration-500 ease-out dark:bg-gray-100"
           style={{ top: DOT_BAND / 2, width: `calc(var(--pitch) * ${activeIndex})` }}
         />
 
@@ -255,8 +341,8 @@ export default function Navbar() {
                 <span
                   className={`block rounded-full transition-all duration-300 ease-out ${
                     isActive
-                      ? 'h-[11px] w-[11px] border-[1.5px] border-gray-900 bg-white'
-                      : 'h-[5px] w-[5px] bg-gray-400 group-hover/stop:bg-gray-900'
+                      ? 'h-[11px] w-[11px] border-[1.5px] border-gray-900 bg-white dark:border-gray-100 dark:bg-gray-900'
+                      : 'h-[5px] w-[5px] bg-gray-400 group-hover/stop:bg-gray-900 dark:bg-gray-600 dark:group-hover/stop:bg-gray-100'
                   }`}
                 />
               </span>
@@ -269,8 +355,8 @@ export default function Navbar() {
               <span
                 className={`mt-1.5 whitespace-nowrap text-[11px] opacity-0 transition-all duration-300 group-focus-within/nav:opacity-100 group-hover/nav:opacity-100 ${
                   isActive
-                    ? 'font-medium text-gray-900'
-                    : 'text-gray-500 group-hover/stop:text-gray-900'
+                    ? 'font-medium text-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 group-hover/stop:text-gray-900 dark:text-gray-400 dark:group-hover/stop:text-gray-100'
                 }`}
               >
                 {item.label}

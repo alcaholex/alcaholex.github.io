@@ -16,6 +16,20 @@ let ctx = null
 let master = null
 let noiseBuf = null
 
+// The navbar's mute switch. One gate on the master bus rather than checks in
+// every voice: everything keeps playing into a closed fader, so unmuting
+// mid-gesture picks the sound up exactly where it would have been.
+let mutedFlag = false
+export function setMuted(m) {
+  mutedFlag = m
+  if (ctx && master) {
+    master.gain.setTargetAtTime(m ? 0 : MASTER, ctx.currentTime, 0.02)
+  }
+}
+export function isMuted() {
+  return mutedFlag
+}
+
 // iOS mutes plain Web Audio with the ringer switch — an AudioContext counts
 // as "ambient" sound, unlike media playback. A PLAYING media element flips
 // the page's whole audio session into the playback category, ringer switch
@@ -71,7 +85,7 @@ function ensure(fromGesture) {
     comp.knee.value = 24
     comp.ratio.value = 6
     master = ctx.createGain()
-    master.gain.value = MASTER
+    master.gain.value = mutedFlag ? 0 : MASTER
     master.connect(comp)
     comp.connect(ctx.destination)
   }
@@ -139,7 +153,7 @@ function noiseSource() {
 // never a dissonance. ROOT moves the whole instrument (220 = A3, the soft
 // mallet register); OCTAVES sets its reach.
 const PLUCK_ROOT = 220
-const PLUCK_OCTAVES = 2
+const PLUCK_OCTAVES = 3
 const SCALE = [0, 2, 4, 7, 9]
 const PLUCK_NOTES = []
 for (let oct = 0; oct < PLUCK_OCTAVES; oct++) {
@@ -217,6 +231,23 @@ export function snap(strength = 0.5) {
   n.stop(t + 0.03)
 }
 
+// The station modal's back/next buttons walk the instrument one note at a
+// time: forward steps up the ladder and wraps around to the bottom past the
+// top note; back steps down and wraps to the top past the bottom. One
+// shared cursor, deliberately NOT reset when hopping between stations —
+// riding a whole line click by click keeps climbing the scale — but pulled
+// back to the root whenever a station is opened fresh from the map (which
+// plays the root itself).
+let stepIdx = 0
+export function pluckReset() {
+  stepIdx = 0
+}
+export function pluckStep(dir) {
+  const n = PLUCK_NOTES.length
+  stepIdx = (stepIdx + (dir > 0 ? 1 : -1) + n) % n
+  snap(stepIdx / (n - 1))
+}
+
 // Stretching the elastic previews the instrument, the way drawing a line in
 // Mini Metro steps through notes: each rung of the pentatonic ladder crossed
 // plays one small soft dot — up as the band is pulled, back down as it is
@@ -266,6 +297,89 @@ export function stretchTo(amount) {
   g.connect(send)
   o.start(t)
   o.stop(t + 0.16)
+}
+
+// The navbar's four stops are four HUMS — the title drone's own voice, a
+// chord of pure sines that swells in and breathes out together, but pitched
+// differently per stop: the classic cadence in the site's key of A. Home is
+// I, about is IV, projects is V, and art — the end of the line — is I again
+// an octave up, so riding forward plays a full resolution one arrival at a
+// time and riding back unwinds it. Where the title's hum sustains for as
+// long as the word turns, these are a single breath: ~150ms swell, a short
+// hold, then a slow release into the room. Just intonation throughout, same
+// as the drone. Played only for clicks on the strip (a gesture, so it may
+// unlock audio); the quiet non-emphatic voicing is kept for any future
+// caller that wants it.
+const NAV_CHORDS = [
+  [1, 1.25, 1.5], // A  (I)
+  [4 / 3, 5 / 3, 2], // D  (IV)
+  [1.5, 1.875, 2.25], // E  (V)
+  [2, 2.5, 3], // A' (I, octave up)
+]
+export function navTo(stop, emphatic = false) {
+  if (emphatic) {
+    if (!ensure(true)) return
+  } else if (!ctx || ctx.state !== 'running' || !master) {
+    return
+  }
+  const t = ctx.currentTime
+  const chord = NAV_CHORDS[Math.max(0, Math.min(NAV_CHORDS.length - 1, stop))]
+  const jitter = 1 + (Math.random() - 0.5) * 0.008
+  const send = ctx.createGain()
+  send.gain.value = 0.35
+  send.connect(reverbIn())
+  // Voiced like the drone: root strongest, upper notes tucked underneath.
+  const peaks = emphatic ? [0.09, 0.055, 0.045] : [0.055, 0.034, 0.028]
+  const swell = 0.08
+  const hold = emphatic ? 0.1 : 0.06
+  const release = 0.25
+  chord.forEach((ratio, i) => {
+    const o = ctx.createOscillator()
+    o.type = 'sine'
+    o.frequency.value = PLUCK_ROOT * ratio * jitter
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(peaks[i], t + swell)
+    g.gain.setValueAtTime(peaks[i], t + swell + hold)
+    g.gain.setTargetAtTime(0, t + swell + hold, release / 4)
+    o.connect(g)
+    g.connect(master)
+    g.connect(send)
+    o.start(t)
+    o.stop(t + swell + hold + release + 0.2)
+  })
+}
+
+// A section sweeping in plays the chord its navbar stop owns, breathed
+// slower and much quieter — the swipe is the site's own train pulling in,
+// so it speaks the navbar's harmony at the pace of the panel's 0.6s glide:
+// a long swell that crests as the sweep lands, then releases into the room.
+// Not gesture-bound (it fires mid-scroll), so it stays silent until some
+// earlier gesture has unlocked audio.
+export function swipe(stop) {
+  if (!ctx || ctx.state !== 'running' || !master) return
+  const t = ctx.currentTime
+  const chord = NAV_CHORDS[Math.max(0, Math.min(NAV_CHORDS.length - 1, stop))]
+  const jitter = 1 + (Math.random() - 0.5) * 0.008
+  const send = ctx.createGain()
+  send.gain.value = 0.35
+  send.connect(reverbIn())
+  const peaks = [0.05, 0.031, 0.026]
+  chord.forEach((ratio, i) => {
+    const o = ctx.createOscillator()
+    o.type = 'sine'
+    o.frequency.value = PLUCK_ROOT * ratio * jitter
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(peaks[i], t + 0.3)
+    g.gain.setValueAtTime(peaks[i], t + 0.42)
+    g.gain.setTargetAtTime(0, t + 0.42, 0.09)
+    o.connect(g)
+    g.connect(master)
+    g.connect(send)
+    o.start(t)
+    o.stop(t + 1.1)
+  })
 }
 
 // A title in motion HUMS: a soft major-triad drone on the same A the mallet

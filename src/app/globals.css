@@ -1,11 +1,33 @@
 @import "tailwindcss";
 
+/* Dark mode is a class on <html>, not the media query: the site defaults to
+   light for everyone, and only the navbar's switch flips it. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* One-shot theme cross-fade: the switch puts this class on <html> for the
+   duration of the flip, so every surface glides between palettes instead of
+   cutting. !important so it beats inline styles and per-element transitions
+   for that window; the switch removes it ~400ms later. */
+.theme-fading,
+.theme-fading *,
+.theme-fading *::before,
+.theme-fading *::after {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease,
+    fill 0.35s ease,
+    stroke 0.35s ease,
+    text-decoration-color 0.35s ease !important;
+}
+
 :root {
-  /* The site is designed light-only; keep the page the same gray-50 as the
-     sections regardless of the OS colour scheme. */
   --background: #f9fafb;
   --foreground: #171717;
-
+  /* The metro map's inked SVG parts (station discs, modal icon) draw from
+     these rather than literals, so they follow the theme. */
+  --ink: #111827;
+  --paper: #ffffff;
   /* Helvetica Neue can only come from the visitor's own machine — Monotype
      licenses it, so it cannot be served. macOS and iOS ship it; Windows does
      not, and falls to Arial, which shares Helvetica's metrics and reads as a
@@ -14,6 +36,15 @@
      both so the line breaks never move. */
   --font-stack: "Helvetica Neue", Helvetica, Arial, var(--font-display),
     sans-serif;
+}
+
+.dark {
+  --background: #030712;
+  --foreground: #ededed;
+  /* Night-mode stations: dark fill, light ring — Mini Metro's own night
+     palette. */
+  --ink: #e5e7eb;
+  --paper: #111827;
 }
 
 @theme inline {
@@ -31,6 +62,9 @@
    becomes a scroll container of its own.) */
 html {
   overflow-x: clip;
+  /* Same colour as the body so overscroll and load-order gaps never flash
+     the wrong theme. */
+  background: var(--background);
 }
 
 body {

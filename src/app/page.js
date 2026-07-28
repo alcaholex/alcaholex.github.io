@@ -32,7 +32,7 @@ export default function Home() {
             hero canvas (z-40) — including the elsewhere links, which need to
             rise above it to stay clickable. Positioned-with-auto paints in the
             same layer either way, since no section overlaps another. */}
-        <section id="section-2" className="min-h-screen bg-gray-50 flex items-start justify-center relative" data-navbar-theme="light">
+        <section id="section-2" className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-start justify-center relative" data-navbar-theme="light">
           {/* One narrow column centred on the page, everything inside it
               left-aligned: small faint-gray body copy under minimal
               same-size subtitles, and label/value rows where the value sits
@@ -41,11 +41,11 @@ export default function Home() {
               top centre — directly over this column — and runs to about 52px,
               so this is that plus a little air. */}
           <div className="mx-auto w-full max-w-[500px] px-6 pt-16 pb-16">
-            <p className="text-sm leading-relaxed text-gray-500">
-              i&apos;m a high school student with a passion for design, technology, and engineering.
+            <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+              i&apos;m a high school student with a passion for design, technology, and engineering. i take pride in my ability to self-learn. it&apos;s what brought me here!
             </p>
-            <p className="mt-4 text-sm leading-relaxed text-gray-500">
-              i pick things up quickly, so i seldom stop at one. it&apos;s why i listed three passions; most of what i make sits somewhere between them.
+            <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+              if you want to learn more about my journey, check out the &quot;timeline&quot; below.
             </p>
 
             {/* Lifted for the same reason as the links below, and now the more
@@ -57,7 +57,7 @@ export default function Home() {
               <FlowTimeline />
             </div>
 
-            <h2 className="mt-20 text-sm font-medium text-gray-900">elsewhere</h2>
+            <h2 className="mt-20 text-sm font-medium text-gray-900 dark:text-gray-100">elsewhere</h2>
             {/* The other thing that outranks the hero canvas. That canvas is
                 z-40 and 1.5 screens tall, so its empty lower half lies over
                 this column and would swallow every click and hover inside it
@@ -73,11 +73,11 @@ export default function Home() {
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-gray-500 underline underline-offset-4 decoration-gray-300 transition-colors hover:text-gray-800"
+                    className="text-sm text-gray-500 underline underline-offset-4 decoration-gray-300 transition-colors hover:text-gray-800 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200"
                   >
                     {social.label}
                   </a>
-                  <span className="text-sm text-gray-400">{social.handle}</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500">{social.handle}</span>
                 </div>
               ))}
             </div>

@@ -7,6 +7,7 @@ import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
 import ScrollHint from './ScrollHint'
+import ThemedEnvLight from './ThemedEnvLight'
 import * as sfx from './sound'
 
 function Model({ url }) {
@@ -257,11 +258,10 @@ export default function ProjectsTitle({ modelPath = "/models/projects.glb" }) {
           frameloop={isActive ? 'always' : 'never'}
           performance={{ min: 0.8 }}
         >
-          <Environment>
-            <mesh>
-              <sphereGeometry args={[50, 32, 32]} />
-              <meshBasicMaterial color="#ffffff" side={2} />
-            </mesh>
+          {/* frames={Infinity} because the light sphere fades with the
+              theme, and a one-shot bake would never see it change. */}
+          <Environment frames={Infinity}>
+            <ThemedEnvLight />
           </Environment>
 
           <AutoResetOrbitControls />

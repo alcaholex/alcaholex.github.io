@@ -7,6 +7,7 @@ import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
 import ScrollHint from './ScrollHint'
+import ThemedEnvLight from './ThemedEnvLight'
 import * as sfx from './sound'
 
 function Model({ url, onLoad }) {
@@ -215,7 +216,7 @@ function DragHint() {
     // dvh rather than vh: 100vh is the viewport at its tallest, ignoring the
     // mobile address bar, which would push this down behind it.
     <div className="absolute inset-x-0 top-0 h-[100dvh] z-40 pointer-events-none flex items-end justify-center pb-48">
-      <div className="flex items-center gap-2 text-gray-500 text-base font-medium animate-pulse [animation-duration:3s]">
+      <div className="flex items-center gap-2 text-gray-500 text-base font-medium animate-pulse [animation-duration:3s] dark:text-gray-400">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l-4 5 4 5M16 7l4 5-4 5" />
         </svg>
@@ -311,11 +312,10 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
           frameloop={isActive ? 'always' : 'never'}
           performance={{ min: 0.8 }}
         >
-          <Environment>
-            <mesh>
-              <sphereGeometry args={[50, 32, 32]} />
-              <meshBasicMaterial color="#ffffff" side={2} />
-            </mesh>
+          {/* frames={Infinity} because the light sphere fades with the
+              theme, and a one-shot bake would never see it change. */}
+          <Environment frames={Infinity}>
+            <ThemedEnvLight />
           </Environment>
           
           <AutoResetOrbitControls />

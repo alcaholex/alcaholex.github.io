@@ -2,14 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLenis } from './SmoothScroll'
+import * as sfx from './sound'
 
 // How still scrolling must be before a half-finished swipe resolves itself,
 // and how long that resolving scroll takes.
 const SNAP_IDLE_MS = 20
 const SNAP_DURATION_S = 0.6
-// Past this much of the swipe an idle pause carries it the rest of the way in;
-// before it, the section retreats back offscreen.
-const SNAP_FORWARD_THRESHOLD = 0.5
+// Once the swipe has genuinely begun, it commits: crossing this much
+// progress on the way in hands the rest of the sweep to an animated scroll
+// IMMEDIATELY, mid-wheel, rather than waiting for the scroll to go quiet.
+// The idle snap below uses the same threshold as its fallback decision, for
+// the paths that cross while a finger is still down. A few percent rather
+// than zero, so merely grazing the boundary and backing off does not hijack
+// the page into a full section change.
+const SNAP_FORWARD_THRESHOLD = 0.05
 
 // Mid-swipe the panel is frosted glass: its background drops to this strength
 // over a backdrop blur (24px matches the navbar's backdrop-blur-xl), letting
@@ -36,6 +42,9 @@ const GLASS_FADE_MS = 400
 // over a backdrop blur — and fades back to its own opaque colour on arrival.
 export default function SlideInSection({ id, from = 'right', children }) {
   const fromLeft = from === 'left'
+  // The chord this section's arrival plays: its navbar stop, derived from
+  // the site's own id convention ('section-3' → stop index 2).
+  const stopIndex = Math.max(0, (parseInt(id?.split('-')[1], 10) || 1) - 1)
   const wrapperRef = useRef(null)
   const innerRef = useRef(null)
   const pinnedRef = useRef(false)
@@ -68,10 +77,18 @@ export default function SlideInSection({ id, from = 'right', children }) {
   useEffect(() => {
     let idleTimer = null
     let touching = false
-    // Frosted-panel state for the child section's background. `base` is its
-    // real colour, captured before the first inline override so the glass tint
-    // and the arrival fade always land back on the class's own colour.
-    const glass = { on: false, base: null, timer: null }
+    // For detecting the moment the swipe crosses the commit threshold on the
+    // way IN — only an upward crossing commits, so scrolling back up through
+    // a finished swipe cannot re-trigger it.
+    let prevProgress = null
+    let committing = false
+    // Frosted-panel state for the child section's background. The glass is
+    // mixed from var(--background) rather than a captured colour: the
+    // sections are the page colour by design, and the live variable is what
+    // keeps a pinned panel's frost correct through a theme switch — an
+    // inline literal would go stale the moment the palette flips. (If a
+    // section ever gets its own colour, it needs its own variable here.)
+    const glass = { on: false, timer: null }
 
     // 0 while the wrapper's top sits at the viewport bottom, 1 once it
     // reaches the viewport top.
@@ -110,8 +127,19 @@ export default function SlideInSection({ id, from = 'right', children }) {
 
       // Progress 1 leaves the wrapper's top at the viewport top; progress 0
       // leaves it a full viewport lower.
-      const target =
-        window.scrollY + top - (p < SNAP_FORWARD_THRESHOLD ? window.innerHeight : 0)
+      const forward = p >= SNAP_FORWARD_THRESHOLD
+      const target = window.scrollY + top - (forward ? 0 : window.innerHeight)
+
+      // A landing that is already there needs no settle and no chord: a
+      // navbar jump can come to rest a fraction of a pixel short of p=1,
+      // which slips past the p >= 1 check above and would otherwise read
+      // as a fresh forward commit — chord and all — for a scroll of half
+      // a pixel.
+      if (Math.abs(target - window.scrollY) < 2) return
+
+      // Arriving (not retreating) plays this section's chord — this is the
+      // commit path for touch drags, which the instant commit skips.
+      if (forward) sfx.swipe(stopIndex)
 
       if (lenisRef.current) {
         lenisRef.current.scrollTo(target, { duration: SNAP_DURATION_S })
@@ -167,11 +195,10 @@ export default function SlideInSection({ id, from = 'right', children }) {
           glass.on = true
           clearTimeout(glass.timer)
           glass.timer = null
-          if (!glass.base) glass.base = getComputedStyle(sec).backgroundColor
           // No transition while swiping — a re-pin mid-fade must snap back to
           // glass instantly rather than animate against the scrub.
           sec.style.transition = 'none'
-          sec.style.backgroundColor = `color-mix(in srgb, ${glass.base} ${GLASS_BG_STRENGTH}, transparent)`
+          sec.style.backgroundColor = `color-mix(in srgb, var(--background) ${GLASS_BG_STRENGTH}, transparent)`
           sec.style.backdropFilter = GLASS_FILTER
           sec.style.setProperty('-webkit-backdrop-filter', GLASS_FILTER)
         }
@@ -186,7 +213,9 @@ export default function SlideInSection({ id, from = 'right', children }) {
         if (sec && glass.on) {
           glass.on = false
           sec.style.transition = `background-color ${GLASS_FADE_MS}ms ease, backdrop-filter ${GLASS_FADE_MS}ms ease, -webkit-backdrop-filter ${GLASS_FADE_MS}ms ease`
-          sec.style.backgroundColor = glass.base
+          // The live variable again, so an arrival mid-theme-switch fades to
+          // the palette the page is actually wearing.
+          sec.style.backgroundColor = 'var(--background)'
           // Fade the blur out too rather than cutting it: once the colour is
           // opaque the filter is invisible anyway, so this only softens the
           // first frames of the fade.
@@ -202,7 +231,45 @@ export default function SlideInSection({ id, from = 'right', children }) {
         }
       }
 
-      scheduleSnap(progress)
+      // The instant commit: the first time progress crosses the threshold on
+      // the way in, hand the rest of the sweep to an animated scroll RIGHT
+      // NOW — no waiting for the wheel to go quiet. lock swallows stray
+      // wheel ticks during the handover so they cannot stutter it, and the
+      // flag clears on a timer rather than onComplete so a hijacked commit
+      // (say, a navbar jump mid-sweep) cannot wedge it shut forever.
+      if (
+        !committing &&
+        !touching &&
+        // A navbar navigation passing through this swipe region on its way
+        // somewhere else is not a swipe — grabbing it here would strand the
+        // jump (and play the wrong chord). Lenis carries the navbar's
+        // userData tag for the whole travel.
+        !lenisRef.current?.userData?.nav &&
+        prevProgress !== null &&
+        prevProgress <= SNAP_FORWARD_THRESHOLD &&
+        progress > SNAP_FORWARD_THRESHOLD &&
+        progress < 1
+      ) {
+        committing = true
+        clearIdle()
+        // The arrival chord rides the commit, swelling with the sweep.
+        sfx.swipe(stopIndex)
+        const target = window.scrollY + wrapper.getBoundingClientRect().top
+        if (lenisRef.current) {
+          lenisRef.current.scrollTo(target, { duration: SNAP_DURATION_S, lock: true })
+        } else {
+          window.scrollTo({ top: target, behavior: 'smooth' })
+        }
+        setTimeout(() => {
+          committing = false
+        }, SNAP_DURATION_S * 1000 + 250)
+      }
+      prevProgress = progress
+
+      // The idle settle stays as the fallback for every path the instant
+      // commit does not cover: touch drags that cross the threshold with the
+      // finger still down, and stops mid-zone after an upward escape.
+      if (!committing) scheduleSnap(progress)
     }
 
     // A finger resting mid-drag is still holding the swipe, so snapping waits
