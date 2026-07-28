@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLenis } from './SmoothScroll'
+import * as sfx from './sound'
 
 // ─── edit the map here ───────────────────────────────────────────────────────
 // Stations carry no positions — the map lays itself out from the routes
@@ -1075,6 +1076,9 @@ export default function FlowTimeline() {
     m.startOffset = { x: m.x, y: m.y }
     m.tx = m.x
     m.ty = m.y
+    // The press itself is silent, but it is inside a gesture — so it brings
+    // the audio context up, ready for the pluck on release.
+    sfx.unlock()
     // A pulled station may cross a neighbour; make sure it slides over,
     // not under. Reset once the map settles.
     el.style.zIndex = '10'
@@ -1115,7 +1119,13 @@ export default function FlowTimeline() {
     startLoop()
 
     // A press that never became a drag is a click.
-    if (m.moved < CLICK_SLOP) openModal(NODE_BY_ID.get(id))
+    if (m.moved < CLICK_SLOP) {
+      openModal(NODE_BY_ID.get(id))
+    } else {
+      // The pluck's pitch and weight scale with how far the elastic was
+      // stretched at release, plus a little of the flick speed.
+      sfx.snap(Math.min(1, (Math.hypot(m.x, m.y) + 0.06 * Math.hypot(m.vx, m.vy)) / 260))
+    }
   }
 
   // Scale the unit-grid layout to the column. Same factor on both axes, so
@@ -1234,12 +1244,15 @@ export default function FlowTimeline() {
               className="group absolute select-none will-change-transform"
               // The wrapper is placed so the disc's centre lands exactly on
               // its map slot; the physics transform then rides on top
-              // without fighting any centring translate. pan-y keeps the
-              // page scrollable when a touch starts on a station.
+              // without fighting any centring translate. touch-action none:
+              // a touch that starts on a station belongs to the station —
+              // the page must not scroll out from under a drag, and vertical
+              // pulls are half of what the elastic is for. Scrolling past
+              // the map from the gaps between stations still works.
               style={{
                 left: rest.x - meta.size / 2,
                 top: rest.y - meta.size / 2,
-                touchAction: 'pan-y',
+                touchAction: 'none',
               }}
             >
               {/* Invisible pad growing the tap target to HIT_SIZE around

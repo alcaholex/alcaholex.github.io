@@ -23,14 +23,21 @@
 }
 
 
+/* The swipe-in sections translate horizontally and map stations can be
+   dragged past the viewport edge; make sure no intermediate state can ever
+   create sideways scroll. On BOTH elements: html is the real scroll
+   container, so clipping only the body still lets overflow reach the root
+   and put a horizontal pan on the page. (clip, not hidden, so neither
+   becomes a scroll container of its own.) */
+html {
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-stack);
   overscroll-behavior-y: none;
-  /* The swipe-in sections translate horizontally; make sure no intermediate
-     state can ever create sideways scroll. (clip, not hidden, so the body
-     does not become a scroll container.) */
   overflow-x: clip;
 }
 

@@ -7,6 +7,7 @@ import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
 import ScrollHint from './ScrollHint'
+import * as sfx from './sound'
 
 function Model({ url, onLoad }) {
   const { scene } = useGLTF(url, true)
@@ -54,6 +55,8 @@ function AutoResetOrbitControls() {
   const resetProgress = useRef(0)
   const startSpherical = useRef(new Spherical())
   const startTarget = useRef(new Vector3())
+  // Last frame's camera angles, for the angular speed the whoosh follows.
+  const prevAngles = useRef(null)
 
   const easeInOutCubic = (t) => {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -81,6 +84,22 @@ function AutoResetOrbitControls() {
   }
 
   useFrame((state, delta) => {
+    // Sonify the word's motion: angular speed drives the shared whoosh, so a
+    // hand-spin and the ease home stir the same air the same way. Only real
+    // motion calls in — the module's watchdog handles the fade to silence, so
+    // an idle or paused canvas never fights the one that is moving.
+    const c = controlsRef.current
+    if (c && delta > 0) {
+      const az = c.getAzimuthalAngle()
+      const pol = c.getPolarAngle()
+      if (prevAngles.current) {
+        const speed =
+          Math.hypot(az - prevAngles.current.az, pol - prevAngles.current.pol) / delta
+        if (speed > 0.02) sfx.spin(speed)
+      }
+      prevAngles.current = { az, pol }
+    }
+
     if (isResetting && controlsRef.current) {
       resetProgress.current += delta * 5 // Speed of animation
       
@@ -162,6 +181,9 @@ function AutoResetOrbitControls() {
       enableZoom={false}
       enablePan={false}
       rotateSpeed={2}
+      // The grab itself is silent, but it fires inside the gesture, which is
+      // what lets it unlock audio — the spin whoosh cannot do that itself.
+      onStart={() => sfx.unlock()}
     />
   )
 }
