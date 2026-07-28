@@ -245,7 +245,7 @@ export default function Navbar() {
       <div
         ref={wrapperRef}
         onMouseLeave={() => setIsHovered(false)}
-        className={`fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6 font-display ${showFull ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        className={`fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6 font-nav ${showFull ? 'pointer-events-auto' : 'pointer-events-none'}`}
       >
         {/* Collapsed handle: a little downward arrow tab hanging from the top edge. */}
         <button
@@ -318,7 +318,7 @@ export default function Navbar() {
           pill's slide and fade so the two never separate. */}
       <div
         aria-hidden="true"
-        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[60] pt-6 font-display pointer-events-none text-white mix-blend-difference transition-all duration-300 ${showFull ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'}`}
+        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[60] pt-6 font-nav pointer-events-none text-white mix-blend-difference transition-all duration-300 ${showFull ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'}`}
       >
         <div className={`px-4 py-3 md:px-6 border border-transparent ${ROW_CLASS}`}>
           {navItems.map((item) => (

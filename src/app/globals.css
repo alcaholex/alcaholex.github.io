@@ -35,9 +35,16 @@ body {
 }
 
 /* One family site-wide now, so this exists only for the places that ask for the
-   display face by name (the navbar and the loading wordmark). */
+   display face by name (the loading wordmark). */
 .font-display {
   font-family: var(--font-stack);
+}
+
+/* The navbar alone stays on Montserrat, the face the site was set in before it
+   moved to Helvetica. It sits over the page rather than in it, so a different
+   family reads as chrome instead of as an inconsistency. */
+.font-nav {
+  font-family: var(--font-nav), "Montserrat", sans-serif;
 }
 
 /* Custom cursor. The class is added by GlassCursor once it is mounted and

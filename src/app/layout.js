@@ -1,4 +1,4 @@
-import { Arimo } from "next/font/google";
+import { Arimo, Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import SmoothScroll from "../components/SmoothScroll";
@@ -14,6 +14,16 @@ import GlassCursor from "../components/GlassCursor";
 const fallback = Arimo({
   variable: "--font-display",
   subsets: ["latin"],
+});
+
+// The navbar keeps the face the whole site used to be set in, so it reads as
+// chrome rather than as part of the page. It is the only thing left on
+// Montserrat, hence the narrow weight list — the nav labels are font-medium
+// and nothing else asks for it.
+const navFont = Montserrat({
+  variable: "--font-nav",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata = {
@@ -36,7 +46,7 @@ export default function RootLayout({ children }) {
     // The font variable goes on <html>, not <body>: globals.css builds
     // --font-stack on :root, and a var() reference resolves against the element
     // it is declared on — so --font-display has to exist by then.
-    <html lang="en" className={fallback.variable}>
+    <html lang="en" className={`${fallback.variable} ${navFont.variable}`}>
       <body className="antialiased">
         <SmoothScroll>
           <Navbar />
