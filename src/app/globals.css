@@ -5,20 +5,28 @@
      sections regardless of the OS colour scheme. */
   --background: #f9fafb;
   --foreground: #171717;
+
+  /* Helvetica Neue can only come from the visitor's own machine — Monotype
+     licenses it, so it cannot be served. macOS and iOS ship it; Windows does
+     not, and falls to Arial, which shares Helvetica's metrics and reads as a
+     near-twin at text sizes. --font-display (Arimo, from layout.js) is the
+     webfont backstop for machines with neither, and is metric-compatible with
+     both so the line breaks never move. */
+  --font-stack: "Helvetica Neue", Helvetica, Arial, var(--font-display),
+    sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-manrope), Helvetica, Arial, sans-serif;
-  --font-montserrat: var(--font-montserrat);
+  --font-sans: var(--font-stack);
 }
 
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-manrope), Helvetica, Arial, sans-serif;
+  font-family: var(--font-stack);
   overscroll-behavior-y: none;
   /* The swipe-in sections translate horizontally; make sure no intermediate
      state can ever create sideways scroll. (clip, not hidden, so the body
@@ -26,8 +34,46 @@ body {
   overflow-x: clip;
 }
 
-.font-montserrat {
-  font-family: var(--font-montserrat), "Montserrat", sans-serif;
+/* One family site-wide now, so this exists only for the places that ask for the
+   display face by name (the navbar and the loading wordmark). */
+.font-display {
+  font-family: var(--font-stack);
+}
+
+/* Custom cursor. The class is added by GlassCursor once it is mounted and
+   tracking, so the native pointer is never hidden with nothing standing in for
+   it. Both the universal selector and !important are needed: links, buttons and
+   the lightbox's own zoom/grab states all set a cursor of their own, and any one
+   of them would otherwise bring the arrow straight back. */
+html.glass-cursor:not(.is-loading),
+html.glass-cursor:not(.is-loading) * {
+  cursor: none !important;
+}
+
+/* The disc stays out of the loading screen, which is a full-bleed moment of its
+   own. The native pointer is left in place there by the :not() above, so there
+   is always a cursor of some kind. !important because the disc's own opacity is
+   written inline by its rAF loop. */
+html.is-loading .glass-cursor-dot {
+  opacity: 0 !important;
+}
+
+/* Loading wordmark. Each letter is a vertical column of candidate glyphs inside
+   a one-glyph window, stepped through by this transform animation — so the
+   scramble is a compositor animation rather than JS rewriting text. That is the
+   whole point: during load the main thread is busy parsing models and compiling
+   transmission shaders, and anything driven by setInterval or React would stall
+   in exactly the stretch the loader is meant to cover.
+
+   -100% is the column's own height, so steps() lands on each glyph in turn and
+   this stays correct however many candidates there are. */
+@keyframes scramble {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
 }
 
 /* Lenis smooth scroll: let the library own the scroll animation. */

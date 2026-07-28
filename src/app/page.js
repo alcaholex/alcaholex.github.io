@@ -5,7 +5,17 @@ import Projects from '../components/Projects'
 import Art from '../components/Art'
 import SlideInSection from '../components/SlideInSection'
 import LoadingGate from '../components/LoadingGate'
-import { GithubIcon, InstagramIcon, LinkedInIcon } from '../components/Icons'
+import FlowTimeline from '../components/FlowTimeline'
+
+// Rendered as label/value rows (link left, handle right) so the list reads
+// like an index rather than a row of buttons.
+const SOCIALS = [
+  { label: 'github', handle: 'alcaholex', href: 'https://github.com/alcaholex' },
+  { label: 'instagram', handle: '@alcaholex', href: 'https://www.instagram.com/alcaholex' },
+  { label: 'linkedin', handle: 'alex li', href: 'https://www.linkedin.com/in/alex-li-092b14378/' },
+  { label: 'email', handle: 'imulixuhang@gmail.com', href: 'mailto:imulixuhang@gmail.com' },
+  { label: 'youtube', handle: 'hoiman7074', href: 'https://www.youtube.com/@hoiman7074' },
+]
 
 export default function Home() {
   return (
@@ -17,84 +27,68 @@ export default function Home() {
         <ThreeDModel />
         <section id="section-1" className="h-screen flex items-end justify-center relative z-30 pointer-events-none" data-navbar-theme="light">
         </section>
-        <section id="section-2" className="min-h-screen bg-gray-50 flex items-start justify-center relative z-30" data-navbar-theme="light">
-          <div className="container mx-auto px-4 pt-24 pb-16 max-w-6xl">
-            <div className="grid lg:grid-cols-3 gap-16 items-start">
-              {/* Left Column - Title & Profile */}
-              <div className="lg:col-span-1 flex flex-col items-center lg:items-start space-y-8">
-                {/* Title */}
-                <div>
-                  <h1 className="text-4xl font-medium text-gray-900 mb-4">
-                    hello, i&apos;m <span className="font-bold">alex</span>
-                  </h1>
-                  <div className="w-24 h-1 bg-gray-300 mx-auto lg:mx-0"></div>
-                </div>
+        {/* Deliberately NOT z-30 like section 1. A z-index here would make this
+            section a stacking context, trapping everything inside it below the
+            hero canvas (z-40) — including the elsewhere links, which need to
+            rise above it to stay clickable. Positioned-with-auto paints in the
+            same layer either way, since no section overlaps another. */}
+        <section id="section-2" className="min-h-screen bg-gray-50 flex items-start justify-center relative" data-navbar-theme="light">
+          {/* One narrow column centred on the page, everything inside it
+              left-aligned: small faint-gray body copy under minimal
+              same-size subtitles, and label/value rows where the value sits
+              flush right in an even fainter gray. */}
+          {/* pt-12 is as high as the column can start: any less and the
+              navbar's collapsed handle — which hangs from the top edge at
+              centre, right over this column — lands on the first line. */}
+          <div className="mx-auto w-full max-w-[500px] px-6 pt-12 pb-16">
+            <p className="text-sm leading-relaxed text-gray-500">
+              i&apos;m a high school student with a passion for design, technology, and engineering.
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-gray-500">
+              i take pride in my ability to learn quickly and adapt to new challenges, which has allowed me to explore a wide range of interests and develop a diverse skillset.
+            </p>
 
-                {/* Profile Photo */}
-                <div className="flex justify-center">
-                  <div className="w-64 h-64 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full overflow-hidden shadow-lg">
-                    <img
-                      src="/pfp.jpg"
-                      alt="Alex Li Profile Picture"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
+            <h2 className="mt-10 text-sm font-medium text-gray-900">currently</h2>
+            <p className="mt-4 text-sm leading-relaxed text-gray-500">building a castle</p>
 
-
-                {/* Social Links */}
-                <div className="flex justify-center space-x-4">
-                  <a href="https://github.com/alcaholex" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200">
-                    <GithubIcon />
+            <h2 className="mt-10 text-sm font-medium text-gray-900">elsewhere</h2>
+            {/* The one thing that outranks the hero canvas. That canvas is
+                z-40 and 1.5 screens tall, so its empty lower half lies over
+                this part of the column and would swallow every click and hover
+                here while the page is still inside the first viewport. z-40
+                rather than higher on purpose: equal z-index resolves by DOM
+                order, so this lands above the canvas (earlier in the document)
+                yet still below the swipe-in panels (later), which must be able
+                to sweep over this section. */}
+            <div className="relative z-40 mt-4">
+              {SOCIALS.map((social) => (
+                <div key={social.label} className="flex items-center justify-between py-0.5">
+                  <a
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-500 underline underline-offset-4 decoration-gray-300 transition-colors hover:text-gray-800"
+                  >
+                    {social.label}
                   </a>
-                  <a href="https://www.instagram.com/alcaholex" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200">
-                    <InstagramIcon />
-                  </a>
-                  <a href="https://www.linkedin.com/in/alex-li-092b14378/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200">
-                    <LinkedInIcon />
-                  </a>
+                  <span className="text-sm text-gray-400">{social.handle}</span>
                 </div>
-              </div>
-
-              {/* Right Column - Content */}
-              <div className="lg:col-span-2 space-y-8 mt-16">
-                {/* Intro */}
-                <div>
-                  <p className="text-gray-800 text-xl leading-relaxed mb-6">
-                    i&apos;m a high school student with a passion for design, technology, and engineering.
-                  </p>
-                  <p className="text-gray-600 text-lg leading-relaxed">
-                    despite my already wide variety of skills and interests, i am always eager to learn and take on new challenges!
-                  </p>
-                </div>
-
-                {/* Current Status */}
-                <div>
-                  <h3 className="text-gray-900 font-medium text-lg mb-3">currently:</h3>
-                  <p className="text-gray-600">in a cave with a box of scraps</p>
-                </div>
-
-                {/* Skills */}
-                <div>
-                  <h3 className="text-gray-900 font-medium text-lg mb-4">skills & technologies:</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {['Blender', 'Unity', 'Fusion 360', 'DaVinci Resolve', 'C#', 'C++', 'Java', 'Python', '.NET', 'HTML5', 'React.js', 'Next.js', 'Three.js'].map((skill) => (
-                      <span key={skill} className="px-4 py-2 bg-black/5 backdrop-blur-xl border border-black/15 text-gray-800 text-sm rounded-full hover:bg-black/8 hover:border-black/20 transition-all duration-300 shadow-lg">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
+
+            <FlowTimeline />
           </div>
         </section>
         {/* Projects swipes in from the right and art from the left, once the
             previous section's bottom is reached; the wrappers carry the ids the
-            navbar targets. */}
+            navbar targets. The empty half-viewport spacers push that trigger
+            back, so each section gets a beat of plain scroll (over the page's
+            own gray-50) before the next panel starts sweeping in. */}
+        <div aria-hidden className="h-[50vh]" />
         <SlideInSection id="section-3">
           <Projects />
         </SlideInSection>
+        <div aria-hidden className="h-[50vh]" />
         <SlideInSection id="section-4" from="left">
           <Art />
         </SlideInSection>

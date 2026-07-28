@@ -273,7 +273,13 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
           transparent background, so the name renders over section 2 as it rises.
           Scrolls with the page. LensShift keeps the name in the first viewport with
           the pivot on the model. Pointer events only while the name is up top, so
-          the sections stay interactive once it has scrolled away. */}
+          the sections stay interactive once it has scrolled away.
+
+          One thing rises above this: the links in the about section. On desktop
+          the empty lower half of this box lies across the top of section 2, and
+          while the page is still within the first viewport it takes pointer
+          events there — so those links opt out by sitting at z-40 themselves,
+          later in the DOM. See the note on them in page.js. */}
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
