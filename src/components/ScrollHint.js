@@ -3,17 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLenis } from './SmoothScroll'
 
-// The nudge to keep scrolling: a bare chevron, no frame behind it. Sits at the
-// bottom of whichever title
-// screen renders it — the hero, projects or art — and on click scrolls exactly
-// one screen down: each of those reserves a screen, so that lands on the
-// content beneath it.
 export default function ScrollHint({ enabled = true }) {
   const wrapperRef = useRef(null)
   const lenis = useLenis()
-  // Shown only while the screen this belongs to is the one being looked at.
-  // Measured off the wrapper rather than scrollY so the same test works for all
-  // three, including the titles that ride inside a pinned section mid-swipe.
+
   const [atTop, setAtTop] = useState(true)
 
   useEffect(() => {
@@ -21,11 +14,7 @@ export default function ScrollHint({ enabled = true }) {
       const wrapper = wrapperRef.current
       if (!wrapper) return
       const top = wrapper.getBoundingClientRect().top
-      // Visible from the moment this title screen is the one on top until
-      // the content below it has scrolled 30% of a viewport into view — the
-      // nudge should survive the start of the scroll it asked for, not
-      // vanish at the first pixel. (It rides its own screen out of view, so
-      // by -30% it is already low on the page; the fade finishes the job.)
+
       setAtTop(top < 50 && top > -0.3 * window.innerHeight)
     }
 
@@ -40,8 +29,6 @@ export default function ScrollHint({ enabled = true }) {
 
   const visible = enabled && atTop
 
-  // Through Lenis, so the descent eases like every other scroll on the page
-  // rather than fighting its animation.
   const scrollOn = () => {
     const target = window.scrollY + window.innerHeight
     if (lenis) {
@@ -52,17 +39,11 @@ export default function ScrollHint({ enabled = true }) {
   }
 
   return (
-    // Full screen so the button lands at the bottom of this title's own screen,
-    // but click-through: only the button itself takes pointer events, leaving
-    // the canvas behind it draggable. dvh rather than vh, because 100vh is the
-    // viewport at its tallest and would drop the button behind a phone's
-    // address bar — and at pb-6 there is no clearance to absorb that.
     <div
       ref={wrapperRef}
       className={`absolute inset-x-0 top-0 h-[100dvh] z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
-      {/* Just the mark, no chrome — the padding is only there to keep the tap
-          target honest now that nothing is drawn around it. */}
+
       <button
         type="button"
         onClick={scrollOn}

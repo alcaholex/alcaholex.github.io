@@ -7,8 +7,6 @@ import SlideInSection from '../components/SlideInSection'
 import LoadingGate from '../components/LoadingGate'
 import FlowTimeline from '../components/FlowTimeline'
 
-// Rendered as label/value rows (link left, handle right) so the list reads
-// like an index rather than a row of buttons.
 const SOCIALS = [
   { label: 'github', handle: 'alcaholex', href: 'https://github.com/alcaholex' },
   { label: 'instagram', handle: '@alcaholex', href: 'https://www.instagram.com/alcaholex' },
@@ -19,27 +17,14 @@ const SOCIALS = [
 
 export default function Home() {
   return (
-    // The gate wraps the home page rather than the root layout: the layout also
-    // covers /art, /projects and the 404, none of which mount a canvas, so a
-    // gate up there would leave them behind a spinner until it timed out.
     <LoadingGate>
       <main>
         <ThreeDModel />
         <section id="section-1" className="h-screen flex items-end justify-center relative z-30 pointer-events-none" data-navbar-theme="light">
         </section>
-        {/* Deliberately NOT z-30 like section 1. A z-index here would make this
-            section a stacking context, trapping everything inside it below the
-            hero canvas (z-40) — including the elsewhere links, which need to
-            rise above it to stay clickable. Positioned-with-auto paints in the
-            same layer either way, since no section overlaps another. */}
+
         <section id="section-2" className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-start justify-center relative" data-navbar-theme="light">
-          {/* One narrow column centred on the page, everything inside it
-              left-aligned: small faint-gray body copy under minimal
-              same-size subtitles, and label/value rows where the value sits
-              flush right in an even fainter gray. */}
-          {/* As high as the column can start. The route strip is fixed at the
-              top centre — directly over this column — and runs to about 52px,
-              so this is that plus a little air. */}
+
           <div className="mx-auto w-full max-w-[500px] px-6 pt-16 pb-16">
             <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
               i&apos;m a high school student with a passion for design, technology, and engineering. i take pride in my ability to self-learn. it&apos;s what brought me here!
@@ -48,24 +33,12 @@ export default function Home() {
               if you want to learn more about my journey, check out the &quot;timeline&quot; below.
             </p>
 
-            {/* Lifted for the same reason as the links below, and now the more
-                urgent of the two: sitting this high in the column puts the
-                map's top half inside the hero canvas's reach, and every station
-                there would be undraggable until the page scrolled a full
-                viewport. */}
             <div className="relative z-40">
               <FlowTimeline />
             </div>
 
             <h2 className="mt-20 text-sm font-medium text-gray-900 dark:text-gray-100">elsewhere</h2>
-            {/* The other thing that outranks the hero canvas. That canvas is
-                z-40 and 1.5 screens tall, so its empty lower half lies over
-                this column and would swallow every click and hover inside it
-                while the page is still within the first viewport. z-40 rather
-                than higher on purpose: equal z-index resolves by DOM order, so
-                this lands above the canvas (earlier in the document) yet still
-                below the swipe-in panels (later), which must be able to sweep
-                over this section. */}
+
             <div className="relative z-40 mt-4">
               {SOCIALS.map((social) => (
                 <div key={social.label} className="flex items-center justify-between py-0.5">
@@ -83,11 +56,7 @@ export default function Home() {
             </div>
           </div>
         </section>
-        {/* Projects swipes in from the right and art from the left, once the
-            previous section's bottom is reached; the wrappers carry the ids the
-            navbar targets. The empty half-viewport spacers push that trigger
-            back, so each section gets a beat of plain scroll (over the page's
-            own gray-50) before the next panel starts sweeping in. */}
+
         <div aria-hidden className="h-[50vh]" />
         <SlideInSection id="section-3">
           <Projects />

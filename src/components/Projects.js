@@ -3,13 +3,6 @@
 import { useState } from 'react'
 import ProjectsTitle from './ProjectsTitle'
 
-// A real board's four columns, read across: the year stands in for the time,
-// the project for the destination, and status for whether the thing is still
-// running. `platform` is the one that earns the conceit outright — a platform
-// is where you catch the thing in both senses, so steam and itch.io go in the
-// column a number would. Newest first, the way a board shows the next train
-// first.
-// `status` is free text — 'in service', 'under construction', 'terminated'.
 const projects = [
   {
     title: '3d portfolio website',
@@ -49,48 +42,29 @@ const projects = [
   },
 ]
 
-// One shared track definition for the header labels and every row, so the two
-// stay locked together. Four columns will not fit a phone, so below sm the
-// board folds to two lines — time and destination up top, platform and status
-// beneath — and the cells are placed explicitly rather than left to flow.
 const COLS =
   'grid grid-cols-[2.75rem_1fr_1rem] gap-x-3 gap-y-1 sm:grid-cols-[3rem_1fr_4.5rem_8.5rem_1rem]'
 const CELL_TIME = 'col-start-1 row-start-1'
 const CELL_DEST = 'col-start-2 row-start-1 min-w-0'
-// display:contents at sm+ dissolves this wrapper so its two children become
-// grid items in their own columns; below that it is a plain flex row sitting
-// on the second line, under the destination.
+
 const CELL_META = 'col-start-2 row-start-2 flex items-baseline gap-3 sm:contents'
 const CELL_PLATFORM = 'sm:col-start-3 sm:row-start-1'
 const CELL_STATUS = 'sm:col-start-4 sm:row-start-1'
 const CELL_END = 'col-start-3 row-start-1 sm:col-start-5'
-// Left inset that puts panel content under the destination column (the time
-// track plus the gap, at each breakpoint).
+
 const PANEL_INSET = 'pl-[3.5rem] sm:pl-[3.75rem]'
 
 export default function Projects() {
-  // One row open at a time, like a board only ever showing one expanded
-  // service. null when everything is collapsed.
   const [open, setOpen] = useState(null)
 
   return (
-    // id/data-navbar-theme live on the SlideInSection wrapper, which stays in
-    // normal flow while this content is pinned and swiping in.
     <section className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col justify-start relative z-30">
-      {/* The 3D word is the heading; the sr-only h1 keeps it in the document for
-          assistive tech and search. It sits outside the container so its canvas
-          spans the full width, which is what makes it match the hero's. */}
+
       <h1 className="sr-only">projects</h1>
       <ProjectsTitle />
 
-      {/* The about section's quiet register and narrow measure, given 60px more
-          room than its 500px: four board columns plus a destination wide enough
-          for a long project name do not fit inside 500. The two sections are
-          never on screen together, so the difference never reads as a
-          misalignment. */}
       <div className="mx-auto w-full max-w-[560px] px-6 pb-16">
-        {/* Placeholder copy — replace when there is more to say. Left at the
-            default layer on purpose, so the glass word still sweeps over it. */}
+
         <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
           i love building. i notice that the more effort i invest in a project, the more fulfilling it is to complete. they&apos;re like brainchildren.
         </p>
@@ -98,9 +72,6 @@ export default function Projects() {
           the &quot;departures&quot; list below is a record of the things i&apos;ve made... all aboard!
         </p>
 
-        {/* Lifted above the title's canvas (z-40) inside this section's z-30
-            stacking context, so the glass word passes behind the board — and it,
-            not the canvas, takes the clicks where the two overlap. */}
         <div className="relative z-50">
           <h2 className="mt-10 text-sm font-medium text-gray-900 dark:text-gray-100">departures</h2>
 
@@ -152,9 +123,7 @@ export default function Projects() {
                   </svg>
                 </button>
 
-                {/* 0fr to 1fr is what makes this animate: a grid track can be
-                    transitioned where `height: auto` cannot, so the panel opens
-                    to its own height without measuring anything. */}
+                {/* 0fr→1fr is the animatable stand-in for height:auto. */}
                 <div
                   id={panelId}
                   className={`grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
@@ -173,9 +142,7 @@ export default function Projects() {
                       {project.note && (
                         <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">{project.note}</p>
                       )}
-                      {/* Same size and colour as the note above — both are the
-                          panel's small print, so they sit on one rhythm rather
-                          than the links outranking the description. */}
+
                       {project.links && (
                         <div className="mt-2 flex gap-4">
                           {project.links.map((link) => (

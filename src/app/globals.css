@@ -1,13 +1,10 @@
 @import "tailwindcss";
 
-/* Dark mode is a class on <html>, not the media query: the site defaults to
-   light for everyone, and only the navbar's switch flips it. */
+/* Dark mode is a class on <html>, flipped by the navbar switch. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* One-shot theme cross-fade: the switch puts this class on <html> for the
-   duration of the flip, so every surface glides between palettes instead of
-   cutting. !important so it beats inline styles and per-element transitions
-   for that window; the switch removes it ~400ms later. */
+/* One-shot theme cross-fade: on <html> only while the switch flips.
+   !important so it beats inline styles and per-element transitions. */
 .theme-fading,
 .theme-fading *,
 .theme-fading *::before,
@@ -24,16 +21,11 @@
 :root {
   --background: #f9fafb;
   --foreground: #171717;
-  /* The metro map's inked SVG parts (station discs, modal icon) draw from
-     these rather than literals, so they follow the theme. */
+  /* Theme-following colours for the metro map's inked SVG parts. */
   --ink: #111827;
   --paper: #ffffff;
-  /* Helvetica Neue can only come from the visitor's own machine — Monotype
-     licenses it, so it cannot be served. macOS and iOS ship it; Windows does
-     not, and falls to Arial, which shares Helvetica's metrics and reads as a
-     near-twin at text sizes. --font-display (Arimo, from layout.js) is the
-     webfont backstop for machines with neither, and is metric-compatible with
-     both so the line breaks never move. */
+  /* Helvetica Neue is licensed and must come from the visitor's machine;
+     Arial shares its metrics, Arimo (--font-display) is the webfont backstop. */
   --font-stack: "Helvetica Neue", Helvetica, Arial, var(--font-display),
     sans-serif;
 }
@@ -41,8 +33,6 @@
 .dark {
   --background: #030712;
   --foreground: #ededed;
-  /* Night-mode stations: dark fill, light ring — Mini Metro's own night
-     palette. */
   --ink: #e5e7eb;
   --paper: #111827;
 }
@@ -53,17 +43,10 @@
   --font-sans: var(--font-stack);
 }
 
-
-/* The swipe-in sections translate horizontally and map stations can be
-   dragged past the viewport edge; make sure no intermediate state can ever
-   create sideways scroll. On BOTH elements: html is the real scroll
-   container, so clipping only the body still lets overflow reach the root
-   and put a horizontal pan on the page. (clip, not hidden, so neither
-   becomes a scroll container of its own.) */
+/* clip (not hidden) on BOTH: html is the real scroll container, and neither
+   may become a horizontal one when swipes or station drags overflow. */
 html {
   overflow-x: clip;
-  /* Same colour as the body so overscroll and load-order gaps never flash
-     the wrong theme. */
   background: var(--background);
 }
 
@@ -75,33 +58,23 @@ body {
   overflow-x: clip;
 }
 
-/* The navbar alone stays on Montserrat, the face the site was set in before it
-   moved to Helvetica. It sits over the page rather than in it, so a different
-   family reads as chrome instead of as an inconsistency. */
+/* The navbar alone stays on Montserrat. */
 .font-nav {
   font-family: var(--font-nav), "Montserrat", sans-serif;
 }
 
-/* Custom cursor. The class is added by GlassCursor once it is mounted and
-   tracking, so the native pointer is never hidden with nothing standing in for
-   it. Both the universal selector and !important are needed: links, buttons and
-   the lightbox's own zoom/grab states all set a cursor of their own, and any one
-   of them would otherwise bring the arrow straight back. */
+/* Universal + !important, or any element with its own cursor style brings
+   the native arrow back over the glass cursor. */
 html.glass-cursor:not(.is-loading),
 html.glass-cursor:not(.is-loading) * {
   cursor: none !important;
 }
 
-/* The disc stays out of the loading screen, which is a full-bleed moment of its
-   own. The native pointer is left in place there by the :not() above, so there
-   is always a cursor of some kind. !important because the disc's own opacity is
-   written inline by its rAF loop. */
 html.is-loading .glass-cursor-dot {
   opacity: 0 !important;
 }
 
-
-/* Lenis smooth scroll: let the library own the scroll animation. */
+/* Lenis smooth scroll owns the scroll animation. */
 html.lenis,
 html.lenis body {
   height: auto;

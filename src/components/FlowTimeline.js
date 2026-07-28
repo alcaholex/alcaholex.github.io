@@ -5,38 +5,11 @@ import { createPortal } from 'react-dom'
 import { useLenis } from './SmoothScroll'
 import * as sfx from './sound'
 
-// ─── edit the map here ───────────────────────────────────────────────────────
-// Stations carry no positions — the map lays itself out from the routes
-// below (engine ported from metro-map-generator_1.html). A station needs an
-// id, a year (shown in the modal a click opens; time on the map itself is
-// encoded by each route's station order), a title, and a body for that
-// modal (image optional).
-//
-// How lines become the layout:
-// - Trunk lines run as straight 45° tracks, one per line, left to right in
-//   listed order. Stations take successive unit steps down the track; a
-//   station shared with a crosstown is pinned to the crosstown's row,
-//   stretching the trunk's spacing around it.
-// - horizontal: true makes a crosstown: its row sits at the depth of the
-//   deepest trunk station threaded onto it, its trunk stations sit where
-//   their trunk crosses that row, and its own stops hang off the ends.
-// - A line whose ONLY shared stop is its first is a branch: it claims no
-//   trunk and instead walks its stops 45° down-left out of the fork,
-//   rotating away whenever a step would sit on, ride along, or cross
-//   another line.
-// - A trunk with no stations still draws as a bare ribbon.
-// - A repair pass then nudges any non-interchange station that landed on a
-//   foreign station or track, so only listed-shared stops read as
-//   interchanges.
-//
-// VARIANCE (0–100) adds seeded "long jogs": whole runs of single-line
-// stations shift sideways as one piece with 45°/90° ramps, checked against
-// every other line so the wander can never create a crossing or overlap.
-// JOG_SEED picks which jogs happen; reroll it until the wander looks right.
-//
-// shift: { x, y } nudges a station by grid units after layout (the repair
-// pass still keeps things clean). labelSide ('ne' default, 'sw', 'se',
-// 'nw') and labelNudge: [dx, dy] place the angled names, as before.
+// ─── edit the map here ──────────────────────────────────────────────────────
+// Stations: id, year, title, body, optional labelSide ('ne' default /
+// 'sw' / 'se' / 'nw'), labelNudge [dx, dy] px, shift { x, y } in grid units.
+// Lines: ordered station ids; horizontal: true = crosstown row. Layout is
+// generated — VARIANCE (0–100) adds seeded track jogs, reroll JOG_SEED.
 const VARIANCE = 50
 const JOG_SEED = 'alex-2'
 
@@ -63,16 +36,14 @@ const NODES = [
     body: 'in the vex "high stakes" season, i designed and built one of the first robots that could climb. it got my team noticed across the vex world, and it made me want to keep proving the point.' },
   { id: 'provs', year: '2026', title: 'winning big', labelSide: 'sw',
     body: 'we took provincials as underdogs. no school and no organization behind us, just an independent team up against some of the best in the world. it sent us to the world championship, and it is still the result i am proudest of.' },
-  // sw, reading in from the lower-left: its ne ray would run back up the
-  // fork into the cad interchange.
+
   { id: 'more', year: '2026', title: 'more engineering projects', labelSide: 'ne', shift: { x: 5, y: -1 },
     body: 'there is always something half-built on my desk. this stop is deliberately open-ended.' },
   { id: 'itch', year: '2021', title: 'itch publishing', labelSide: 'sw',
     body: 'itch.io meant i could put things in front of real people without waiting for permission from anyone. i have been posting there ever since.' },
   { id: 'blender1', year: '2021', title: 'getting competent in blender', labelSide: 'sw',
     body: 'tutorial after tutorial, until one day i was making my own low-poly models instead of copying someone else. that is the moment a hobby stops being a hobby.' },
-  // se: its sw ray would lie across the blue trunk just below the
-  // blender1 interchange.
+
   { id: 'blender2', year: '2024', title: 'posting art in blender', labelSide: 'ne', shift: { x: 1, y: -3 },
     body: 'starting high school, i made an instagram account and began putting my work where my friends could see it. having an audience, even a small one, made me improve much faster.' },
 ]
@@ -82,25 +53,18 @@ const LINES = [
     stations: ['prog', 'lego', 'blender1', 'unity', 'itch', 'steam'] },
   { id: 'robotics', name: 'robotics line', color: '#c2504f',
     stations: ['lego', 'wc1', 'vex', 'cad', 'qwerty', 'climb', 'vexsim', 'provs'] },
-  // Branch off cad: yellow forks down-left while green runs level through
-  // and red continues down-right — a three-way split at one interchange.
+
   { id: 'engineering', name: 'engineering line', color: '#d0a53e',
     stations: ['cad', 'more'] },
-  // Crosstown through cad: the engine pins cad's trunk to this row and
-  // stretches red around it, so the fork sits ON the green line.
+
   { id: 'making', name: 'making line', color: '#3f8f60', horizontal: true,
     stations: ['blender', 'blender1', 'cad', 'blender2'] },
 ]
-// ─────────────────────────────────────────────────────────────────────────────
 
 const NODE_IDS = new Set(NODES.map((n) => n.id))
 
-// For opening the right modal from a pointer id.
 const NODE_BY_ID = new Map(NODES.map((n) => [n.id, n]))
 
-// Which lines serve each station — station discs, termini and the physics
-// coupling all read from this. Unknown ids in a route are dropped so a
-// half-finished edit above never crashes the page.
 const STATION_LINES = new Map(NODES.map((n) => [n.id, []]))
 LINES.forEach((line) => {
   line.stations = line.stations.filter((s) => NODE_IDS.has(s))
@@ -118,10 +82,6 @@ const homeLineOf = (id) => {
   return through(verticals) || verticals[0] || through(lines) || lines[0]
 }
 
-// Station grammar, in Mini Metro's mounted style: every station is a chunky
-// white circle with a thick ink outline sitting ON the ribbons rather than
-// punched into them. Size is the only differentiator — interchanges largest,
-// termini next, ordinary stops smallest.
 const STATION_META = new Map(
   NODES.map((n) => {
     const lines = STATION_LINES.get(n.id)
@@ -144,11 +104,6 @@ const STATION_META = new Map(
   })
 )
 
-// Who tugs on whom: consecutive stations on a route, so a drag ripples along
-// the line the way a real map would never dare. Each edge remembers which
-// line it belongs to, so a drag's ripple can be confined to the dragged
-// station's own routes instead of leaking through interchanges onto every
-// connected line.
 const NEIGHBORS = new Map(NODES.map((n) => [n.id, []]))
 LINES.forEach((line) => {
   for (let i = 1; i < line.stations.length; i++) {
@@ -157,10 +112,6 @@ LINES.forEach((line) => {
   }
 })
 
-// Route steps out of a station, for the modal's back/next buttons: its
-// predecessor and successor on every line serving it, so a junction offers
-// one button per line and direction. A neighbour reachable along two lines
-// appears once, under the first line listed.
 const stepsFrom = (id) => {
   const back = []
   const next = []
@@ -181,20 +132,14 @@ const stepsFrom = (id) => {
   return { back, next }
 }
 
-/* ─── generation, ported from metro-map-generator_1.html ─────────────────────
-   Layout tuning is in grid units: one unit is one station step along a
-   track. Pixels come later — the finished map is scaled to the column. */
-const TRUNK_GAP = 4 // units of horizontal offset between successive trunks
-const XT_GAP_LEFT = 2 // crosstown-only stops hung left of the first interchange
-const XT_GAP_RIGHT = 1 // ... and right of the last interchange
-const BRANCH_STEP = 1 // units per stop walking down-left out of a fork
+const TRUNK_GAP = 4
+const XT_GAP_LEFT = 2
+const XT_GAP_RIGHT = 1
+const BRANCH_STEP = 1
 
 const EPS = 1e-6
 const DIRS8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]
 
-// Octilinear decomposition of a segment: 1 or 2 pieces, straight first,
-// 45° into the destination. Continuous in its endpoints, which is what
-// keeps the grammar intact even while stations are being dragged.
 function segPieces(a, b) {
   const dx = b.x - a.x, dy = b.y - a.y, adx = Math.abs(dx), ady = Math.abs(dy)
   if (adx < EPS && ady < EPS) return []
@@ -260,17 +205,16 @@ function hashSeed(str) {
 
 function layoutMap(nodes, lines) {
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
-  const pos = new Map() // id -> {x,y} in grid units
-  const linesOf = new Map() // id -> [line ids]
+  const pos = new Map()
+  const linesOf = new Map()
   lines.forEach((L) => L.stations.forEach((id) => {
     if (!linesOf.has(id)) linesOf.set(id, [])
     linesOf.get(id).push(L.id)
   }))
-  const owner = new Map() // id -> first listed line containing it
+  const owner = new Map()
   lines.forEach((L) => L.stations.forEach((id) => { if (!owner.has(id)) owner.set(id, L.id) }))
 
-  /* classify */
-  const kinds = new Map() // line id -> 'trunk' | 'branch' | 'crosstown'
+  const kinds = new Map()
   lines.forEach((L) => {
     if (L.horizontal) { kinds.set(L.id, 'crosstown'); return }
     const first = L.stations[0]
@@ -279,13 +223,10 @@ function layoutMap(nodes, lines) {
     kinds.set(L.id, forkFirst && !laterShared ? 'branch' : 'trunk')
   })
 
-  /* trunk offsets, in listed order */
   const trunkC = new Map()
   let c = 0
   lines.forEach((L) => { if (kinds.get(L.id) === 'trunk') { trunkC.set(L.id, c); c += TRUNK_GAP } })
 
-  /* pass 1: natural depths along each trunk (foreign lead-in stops keep
-     their own depth; the first owned stop starts level with the fork) */
   const natural = new Map()
   lines.forEach((L) => {
     if (kinds.get(L.id) !== 'trunk') return
@@ -296,10 +237,6 @@ function layoutMap(nodes, lines) {
     })
   })
 
-  /* crosstown rows: pulled down to the deepest threaded trunk station.
-     A crosstown with no trunk stations yet gets its own free row below the
-     map, so a freshly added line avoids everything instead of slicing
-     through it. */
   let maxNat = 0
   natural.forEach((v) => { maxNat = Math.max(maxNat, v) })
   let freeRows = 0
@@ -312,13 +249,12 @@ function layoutMap(nodes, lines) {
     if (y < 0) y = maxNat + 1 + freeRows++
     rowY.set(L.id, y)
   })
-  const pinY = new Map() // trunk station id -> crosstown row it is pinned to
+  const pinY = new Map()
   lines.forEach((L) => {
     if (kinds.get(L.id) !== 'crosstown') return
     L.stations.forEach((id) => { if (natural.has(id)) pinY.set(id, rowY.get(L.id)) })
   })
 
-  /* pass 2: final trunk depths with pinning, then positions */
   lines.forEach((L) => {
     if (kinds.get(L.id) !== 'trunk') return
     const C = trunkC.get(L.id)
@@ -331,7 +267,6 @@ function layoutMap(nodes, lines) {
     })
   })
 
-  /* crosstowns: trunk stations already sit on the row; own stops hang off */
   lines.forEach((L) => {
     if (kinds.get(L.id) !== 'crosstown') return
     const y = rowY.get(L.id)
@@ -344,7 +279,7 @@ function layoutMap(nodes, lines) {
     for (let i = firstA + 1; i < ids.length; i++) {
       if (anchored[i]) continue
       if (i > lastA) pos.set(ids[i], { x: pos.get(ids[i - 1]).x + (i === lastA + 1 ? XT_GAP_RIGHT : 1), y })
-      else { /* own stop between two interchanges: split the gap evenly */
+      else {
         let j = i
         while (!anchored[j]) j++
         const a = pos.get(ids[i - 1]), b = pos.get(ids[j]), span = j - (i - 1)
@@ -355,10 +290,6 @@ function layoutMap(nodes, lines) {
     }
   })
 
-  /* branches: walk out of the fork one stop at a time, preferring 45°
-     down-left (against the drift) but rotating away whenever the next step
-     would sit on, ride along, or cross another line — the walk carries its
-     direction, so a dodge continues rather than snapping back */
   lines.forEach((L) => {
     if (kinds.get(L.id) !== 'branch') return
     const fork = pos.get(L.stations[0])
@@ -371,7 +302,7 @@ function layoutMap(nodes, lines) {
       o.stations.forEach((id2) => { const p2 = pos.get(id2); if (p2) oPts.push(p2) })
     })
     const own = [fork]
-    let cur = fork, di = 3 // DIRS8[3] = down-left
+    let cur = fork, di = 3
     L.stations.slice(1).forEach((id) => {
       if (pos.has(id)) { cur = pos.get(id); own.push(cur); return }
       let placed = null
@@ -403,7 +334,6 @@ function layoutMap(nodes, lines) {
     })
   })
 
-  /* author nudges */
   nodes.forEach((n) => {
     if (n.shift && pos.has(n.id)) {
       const p = pos.get(n.id)
@@ -411,13 +341,6 @@ function layoutMap(nodes, lines) {
     }
   })
 
-  /* collision resolution: a station that lands on ANOTHER line's station or
-     track is not an interchange (interchanges are only shared ids) — instead
-     the offending line reshapes around it. Candidate nudges are searched
-     nearest the station's own travel direction, and a candidate is accepted
-     only if its point AND its rerouted octilinear legs stay clear of foreign
-     stations and never ride collinearly along foreign track. Transversal
-     crossings remain allowed, as on any metro map. */
   const CLEAR_PT = 0.45, CLEAR_SEG = 0.3
   const geomOf = (list) => {
     const oSegs = [], oPts = []
@@ -433,7 +356,7 @@ function layoutMap(nodes, lines) {
     if (!oSegs.length && !oPts.length) return
     const ids = L.stations
     ids.forEach((id, i) => {
-      if ((linesOf.get(id) || []).length > 1) return // real interchanges stay put
+      if ((linesOf.get(id) || []).length > 1) return
       const p = pos.get(id)
       if (!p) return
       const ownOthers = ids.filter((o) => o !== id).map((o) => pos.get(o)).filter(Boolean)
@@ -443,9 +366,7 @@ function layoutMap(nodes, lines) {
         ownOthers.some((o) => Math.hypot(o.x - q.x, o.y - q.y) < CLEAR_PT)
       const prev = i > 0 ? pos.get(ids[i - 1]) : null
       const next = i < ids.length - 1 ? pos.get(ids[i + 1]) : null
-      /* strict mode additionally refuses transversal crossings of earlier
-         lines — a crossing is only "willing" when it happens exactly at one
-         of this station's route points (i.e., a shared interchange). */
+
       const legsOK = (q, strict) => {
         const legs = []
         if (prev) segPieces(prev, q).forEach((s) => legs.push(s))
@@ -453,8 +374,7 @@ function layoutMap(nodes, lines) {
         const allowed = [prev, next, q].filter(Boolean)
         return legs.every((s) =>
           !oPts.some((o) => o.id !== id
-            /* only a stop at one of THIS station's route points is legal on a
-               leg — synthetic bend points do not excuse a pass-through */
+
             && !allowed.some((a2) => Math.hypot(o.p.x - a2.x, o.p.y - a2.y) <= EPS)
             && ptSegDist(o.p, s[0], s[1]) < CLEAR_SEG) &&
           !oSegs.some((t) => collinearOverlap(s[0], s[1], t[0], t[1])) &&
@@ -482,24 +402,21 @@ function layoutMap(nodes, lines) {
         }
         return false
       }
-      if (attempt(true)) return // fully clean spot found
-      if (!clash(p) && legsOK(p, false)) return // only a crossing remains and
-      //                                           nothing fixes it: stay put
-      attempt(false) // best effort without crossings rule
+      if (attempt(true)) return
+      if (!clash(p) && legsOK(p, false)) return
+
+      attempt(false)
     })
   }
-  /* phase A: listed order — each line reshapes around earlier lines */
+
   lines.forEach((L, li) => repairLine(L, geomOf(lines.slice(0, li))))
-  /* phase B: avoidance all the time — every line is swept against every
-     other line, later-listed lines moving first so earlier lines keep
-     their shape; two passes let moves settle */
+
   for (let sweep = 0; sweep < 2; sweep++)
     lines.slice().reverse().forEach((L) => repairLine(L, geomOf(lines.filter((o) => o !== L))))
 
   return { nodeById, pos, linesOf, kinds, trunkC }
 }
 
-/* octilinear route through the listed stations, in order */
 function routePoints(L, lay) {
   const pts = []
   L.stations.forEach((id) => { const p = lay.pos.get(id); if (p) pts.push(p) })
@@ -511,13 +428,6 @@ function routePoints(L, lay) {
   return out
 }
 
-/* long jogs: variance across straight CHAINS of stations. A run of
-   collinear stops (e.g. a whole trunk stretch) gets its movable middle —
-   every consecutive block of single-line stations between interchanges —
-   shifted laterally as one piece, stations riding the shifted track, with
-   45/90 degree ramps placed in the gaps on either side. Interchanges and
-   termini never move. A block only shifts when the shifted track and its
-   displaced stations stay clear of every other line and station. */
 function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
   if (!v || v <= 0 || P.length < 3) return P
   const key = (p) => p.x.toFixed(4) + ',' + p.y.toFixed(4)
@@ -543,11 +453,7 @@ function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
     let m = 0.3 + (v / 100) * 0.25
     m = Math.min(m, minGap - 0.2, isDiag ? 0.55 : 0.5)
     if (m < 0.18) return null
-    /* the deviation is anchored at stations: on each side the elbow sits
-       either ON the bounding immovable station (qPrev/qNext) or ON the
-       nearest displaced station of the block — chosen at random per block.
-       All four anchor combos are tried under the same clearance rules
-       before a side is given up. */
+
     const near = (p2, q2) => Math.hypot(p2.x - q2.x, p2.y - q2.y) < 1e-4
     const sideFirst = rnd() < 0.5 ? 1 : -1
     const outAtStn = rnd() < 0.5, backAtStn = rnd() < 0.5
@@ -572,19 +478,19 @@ function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
       for (const combo of combos) {
         const aOut = combo[0], aBack = combo[1]
         let outPt, rampOut, rampOutInc, offStart
-        if (!aOut) { // elbow on qPrev
+        if (!aOut) {
           outPt = { x: qPrev.x + n1[0] * m, y: qPrev.y + n1[1] * m }
           rampOut = [qPrev, outPt]; rampOutInc = qPrev; offStart = outPt
-        } else { // elbow on the first displaced stop
+        } else {
           const bf = P[a2]
           outPt = isDiag ? { x: bf.x, y: bf.y } : { x: bf.x - d[0] * m, y: bf.y - d[1] * m }
           rampOut = [outPt, firstD]; rampOutInc = null; offStart = firstD
         }
         let backPt, rampBack, rampBackInc, offEnd
-        if (!aBack) { // elbow on qNext
+        if (!aBack) {
           backPt = { x: qNext.x - n2[0] * m, y: qNext.y - n2[1] * m }
           rampBack = [backPt, qNext]; rampBackInc = qNext; offEnd = backPt
-        } else { // elbow on the last displaced stop
+        } else {
           const bl = P[b2]
           backPt = { x: bl.x + d[0] * m, y: bl.y + d[1] * m }
           rampBack = [lastD, backPt]; rampBackInc = null; offEnd = lastD
@@ -599,9 +505,7 @@ function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
           if (moved.some((mv) => Math.hypot(q2.x - mv[1].x, q2.y - mv[1].y) < 0.45)) ok = false
         })
         if (!ok) continue
-        /* ramps touching a station other lines legitimately pass through
-           (an interchange) only forbid riding along those segments;
-           everything else gets the full crossing/overlap/distance check */
+
         const rampOK = (ramp, at) => otherSegs.every((t2) => {
           if (at && (near(t2[0], at) || near(t2[1], at)))
             return !collinearOverlap(ramp[0], ramp[1], t2[0], t2[1])
@@ -629,7 +533,7 @@ function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
         const id = idAt.get(key(P[idx]))
         return id && (lay.linesOf.get(id) || []).length === 1 ? id : null
       }
-      let emitted = i // last base index already emitted
+      let emitted = i
       let a2 = i + 1
       while (a2 <= j - 1) {
         if (!movableAt(a2)) { a2++; continue }
@@ -654,10 +558,6 @@ function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
   return out
 }
 
-/* rendered route geometry: earlier lines' final (jogged) paths are
-   obstacles for later lines' jogs, later lines' base paths are respected
-   too — so variance can never create a crossing or overlap. Returns the
-   (possibly displaced) station positions plus each line's polyline. */
 function buildRoutes(lay, variance, gseed) {
   const dispPos = new Map()
   lay.pos.forEach((p, id) => dispPos.set(id, { x: p.x, y: p.y }))
@@ -685,9 +585,6 @@ function buildRoutes(lay, variance, gseed) {
   return { routes, pos: dispPos }
 }
 
-// The whole layout, in grid units, computed once at module load: it is
-// deterministic for a given data + VARIANCE + JOG_SEED, and the component
-// only scales it to the column's width.
 const LAY = layoutMap(NODES, LINES)
 const BUILT = buildRoutes(LAY, VARIANCE, hashSeed(JOG_SEED))
 const POS = BUILT.pos
@@ -698,69 +595,34 @@ POS.forEach((p) => {
 })
 if (UX0 > UX1) { UX0 = 0; UX1 = 1; UY0 = 0; UY1 = 1 }
 
-/* ─── rendering & interaction ──────────────────────────────────────────────── */
-
-// Edge padding in px around the scaled map.
 const MARGIN_X = 24
 const PAD_Y = 28
 
-// Thick ribbon lines with gently eased bends — the stations read as holes
-// punched through them. A bend that happens AT a station stays a true
-// vertex instead: any eased curve cuts inside the corner point, sliding
-// the ribbon's centreline out from under the disc, and the stroke's round
-// join softens the outside of the joint anyway.
 const LINE_W = 7
 const CORNER_R = 12
 
-// A press that travels less than this many pixels is a click (opens the
-// modal); anything further is a drag. Generous enough for a wobbly finger,
-// tight enough that no deliberate pull ever pops the dialog.
 const CLICK_SLOP = 5
 
-// The discs are tiny targets (5–15px); an invisible pad centred on each
-// one grows the pressable square to this size. The station's name joins
-// the target too, whenever labels are switched on. Sized just under the
-// map's one-unit station spacing at phone width (~40px), so neighbouring
-// pads meet without meaningfully overlapping.
 const HIT_SIZE = 38
 
-// Backdrop fade duration — matches the art lightbox's transition, and the
-// unmount is delayed by the same amount so the exit fade gets to play.
 const FADE_MS = 300
 
-// How far a station can be pulled. The easing approaches this
-// asymptotically, so the limit feels like pushing into ever-denser liquid.
 const MAX_DRAG = 500
-// The dragged station is not pinned to the pointer — it glides after it,
-// covering this per-second rate of the remaining distance. That lag is most
-// of what reads as fluid; raise for a tighter follow, lower for more syrup.
+
 const FOLLOW = 12
-// Spring anchoring every station to its map slot. Soft, and paired with
-// damping just past the critical value (2·√K_ANCHOR), so stations ease home
-// in one smooth motion with no overshoot.
+
 const K_ANCHOR = 50
 const DAMPING = 15
-// Positional pull along each route segment: dragging a station tows its
-// neighbours a little. Equilibrium tug on a neighbour is
-// K_LINK / (K_ANCHOR + K_LINK) of the drag.
+
 const K_LINK = 40
-// Viscous coupling: neighbours share velocity as well as position, which is
-// what makes a pull ripple outward along a route like a disturbance in
-// liquid rather than a chain of springs.
+
 const VISCOSITY = 8
-// A hard flick can hand the map a huge starting velocity; cap it so the
-// drift never carries a station across the chart.
+
 const MAX_RELEASE_VELOCITY = 600
-// How much stretch reaches the instrument's top note, in px of the
-// station's own (rubber-eased) offset. The rubber curve approaches MAX_DRAG
-// asymptotically, so 320 eased px takes roughly 900px of pointer travel —
-// the top of the ladder is reserved for a genuinely full-arm pull. Capped
-// against the viewport so a phone, with far less arm available, can still
-// reach the top note with a full-screen drag.
+
 const stretchFull = () =>
   Math.min(320, (typeof window === 'undefined' ? 800 : window.innerHeight) * 0.4)
 
-// Renders a route as a polyline with rounded bends.
 function beckPath(pts) {
   const verts = [pts[0]]
   for (let i = 1; i < pts.length; i++) {
@@ -774,9 +636,9 @@ function beckPath(pts) {
     const p = verts[i - 1]
     const c = verts[i]
     const n = verts[i + 1]
-    // Bends at stations are not eased — the centreline must pass exactly
-    // through the point the disc is centred on, or the circle sits off the
-    // line at every turn.
+
+    // Bends AT stations stay true vertices: any eased corner cuts inside
+    // the point the disc is centred on, sliding the line out from under it.
     if (c.s) {
       d += ` L ${c.x} ${c.y}`
       continue
@@ -794,12 +656,6 @@ function beckPath(pts) {
   return d
 }
 
-// A station's name, set on a ±45° axis through the stop. The transform
-// list reads right to left: the name first slides out along its own axis
-// (the gap plus any dx nudge), then the whole thing rotates about the end
-// anchored at the station, and an optional dy drops it in screen space.
-// 'ne'/'se' anchor the name's left end at the stop and run outward;
-// 'sw'/'nw' anchor its right end, so the name reads in toward the stop.
 const LABEL_GAP = 10
 const labelStyle = (side, [dx, dy]) => {
   const base = { top: 'calc(50% - 7px)' }
@@ -810,48 +666,29 @@ const labelStyle = (side, [dx, dy]) => {
       return { ...base, left: '50%', transformOrigin: '0 50%', transform: `translateY(${dy}px) rotate(45deg) translateX(${LABEL_GAP + dx}px)` }
     case 'nw':
       return { ...base, right: '50%', transformOrigin: '100% 50%', transform: `translateY(${dy}px) rotate(45deg) translateX(${-(LABEL_GAP + dx)}px)` }
-    default: // ne
+    default:
       return { ...base, left: '50%', transformOrigin: '0 50%', transform: `translateY(${dy}px) rotate(-45deg) translateX(${LABEL_GAP + dx}px)` }
   }
 }
 
-// The journey as a metro map: thick coloured ribbons through white stops,
-// interchanges as larger ink-ringed discs, names as small angled type. The
-// layout comes from the ported generator above; this component scales it
-// to the column and adds the life — stations can be dragged and the map
-// moves like it is suspended in liquid: the grabbed stop glides after the
-// pointer, the pull ripples down its own routes only, and everything eases
-// home on release. Ribbons re-derive their octilinear pieces from live
-// station positions every frame, so the Beck grammar holds even mid-drag.
-// All motion is written straight to the nodes rather than through React
-// state, since it runs per frame on the same main thread as the canvases.
 export default function FlowTimeline() {
   const gridRef = useRef(null)
   const nodeEls = useRef(new Map())
   const pathEls = useRef([])
   const geomRef = useRef(null)
-  // Per-station motion state: offset from the map slot, velocity, drag
-  // flag. Lives in a ref because none of it should ever cause a render.
+
   const motion = useRef(new Map())
   const rafRef = useRef(0)
   const runningRef = useRef(false)
-  // The lines whose coupling is live: a drag energises only the dragged
-  // station's own routes, so its ripple stops at an interchange instead of
-  // spreading across the whole network. Rebuilt from the currently-held
-  // stations at every grab; cleared once the map settles.
+
   const activeLines = useRef(new Set())
-  // The scaled geometry needs the real width, so it is the one layout
-  // input that goes through state.
+
   const [mapW, setMapW] = useState(0)
-  // The station whose modal is open, or null.
+
   const [active, setActive] = useState(null)
-  // Station names on the map, switchable above it. Off by default: the map
-  // reads as a graphic first, and the names are there for whoever wants
-  // them (every station's title is in the modal a click opens anyway).
+
   const [labelsOn, setLabelsOn] = useState(false)
-  // Drives the backdrop fade, exactly like the art lightbox: false on first
-  // paint, flipped the next frame (a transition needs two distinct states),
-  // and flipped back before unmounting so closing mirrors opening.
+
   const [shown, setShown] = useState(false)
   const closeTimer = useRef(0)
   const lenis = useLenis()
@@ -861,15 +698,11 @@ export default function FlowTimeline() {
     setActive(node)
   }
 
-  // Play the exit fade before unmounting.
   const dismiss = () => {
     setShown(false)
     closeTimer.current = setTimeout(() => setActive(null), FADE_MS)
   }
 
-  // Same contract as the art lightbox: Escape closes, and stopping Lenis
-  // (html.lenis-stopped → overflow:hidden in globals.css) freezes the page
-  // behind the open modal.
   useEffect(() => {
     if (!active) return
     const raf = requestAnimationFrame(() => setShown(true))
@@ -888,20 +721,12 @@ export default function FlowTimeline() {
   const getMotion = (id) => {
     let m = motion.current.get(id)
     if (!m) {
-      // tx/ty is where the pointer wants a dragged station; x/y is where
-      // the station actually is, always trailing it viscously.
       m = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, dragging: false }
       motion.current.set(id, m)
     }
     return m
   }
 
-  // Repaints every ribbon from its stations' CURRENT positions (rest plus
-  // physics offset), re-deriving the octilinear pieces every frame.
-  // segPieces is continuous in its endpoints and only ever emits straight
-  // or 45° segments, so nothing pops and the grammar holds mid-drag; and a
-  // line's ribbon depends only on its own stations, so no drag can move a
-  // foreign line by a pixel.
   const redraw = () => {
     const g = geomRef.current
     if (!g) return
@@ -918,9 +743,7 @@ export default function FlowTimeline() {
         const c = {
           x: st.x + (m ? m.x : 0),
           y: st.y + (m ? m.y : 0),
-          // Tagged as a station so a bend here stays a true vertex, keeping
-          // the ribbon's centreline exactly under the disc; derived bend
-          // points get the full eased radius.
+
           s: st.id,
         }
         if (pts.length) {
@@ -934,19 +757,12 @@ export default function FlowTimeline() {
     })
   }
 
-  // One shared simulation for the whole map, running only while something
-  // is moving. Each free station feels its anchor spring, damping, a
-  // positional pull toward each route-neighbour's offset, and a viscous
-  // drag toward its velocity; a dragged station glides after the pointer
-  // and acts on the others without being acted upon.
   const startLoop = () => {
     if (runningRef.current) return
     runningRef.current = true
     let prev = performance.now()
 
     const step = (now) => {
-      // Clamped so a background tab resuming does not integrate one giant
-      // unstable timestep.
       const dt = Math.min(0.032, (now - prev) / 1000)
       prev = now
       let energy = 0
@@ -956,10 +772,7 @@ export default function FlowTimeline() {
         const m = getMotion(id)
         if (m.dragging) {
           anyDrag = true
-          // Viscous follow: cover a rate-based fraction of the distance to
-          // the pointer's target each frame. Frame-rate independent, and the
-          // velocity it implies is kept so releasing mid-glide hands the
-          // map that drift as momentum.
+
           const f = 1 - Math.exp(-FOLLOW * dt)
           const px = m.x
           const py = m.y
@@ -969,17 +782,11 @@ export default function FlowTimeline() {
             m.vx = (m.x - px) / dt
             m.vy = (m.y - py) / dt
           }
-          // The stretch previews the instrument: same normalization as the
-          // release pluck, so the last dot heard is the note the letting-go
-          // will land on. The module only sounds when a rung is crossed.
+
           sfx.stretchTo(Math.hypot(m.x, m.y) / stretchFull())
           return
         }
-        // A station that also serves a line outside the live set holds
-        // still: it takes no tow at all, making it the hard anchor that
-        // keeps the drag's effect off every other line it belongs to. (Its
-        // own anchor spring still runs, so any residual offset from an
-        // earlier gesture decays instead of freezing mid-air.)
+
         const pinned =
           activeLines.current.size > 0 &&
           STATION_LINES.get(id).some((l) => !activeLines.current.has(l.id))
@@ -988,7 +795,6 @@ export default function FlowTimeline() {
         let fy = -K_ANCHOR * m.y - DAMPING * m.vy
         if (!pinned) {
           for (const nb of NEIGHBORS.get(id)) {
-            // Only the dragged station's own routes transmit the pull.
             if (!activeLines.current.has(nb.line)) continue
             const n = getMotion(nb.id)
             fx += K_LINK * (n.x - m.x) + VISCOSITY * (n.vx - m.vx)
@@ -1049,15 +855,10 @@ export default function FlowTimeline() {
     }
   }, [])
 
-  // Stations have moved to their new width-derived slots by the time this
-  // runs, so the ribbons re-measure against the fresh geometry.
   useLayoutEffect(() => {
     redraw()
   }, [mapW])
 
-  // Scales a pull so its length approaches MAX_DRAG asymptotically: the
-  // further the station is dragged, the less each extra pixel of pointer
-  // travel moves it.
   const rubber = (x, y) => {
     const mag = Math.hypot(x, y)
     if (!mag) return { x: 0, y: 0 }
@@ -1068,19 +869,14 @@ export default function FlowTimeline() {
   const onPointerDown = (id) => (e) => {
     const el = nodeEls.current.get(id)
     if (!el) return
-    // No preventDefault here: cancelling pointerdown suppresses all
-    // compatibility mouse events until release, which freezes the glass
-    // cursor (it tracks mousemove) for the whole drag. Text selection is
-    // already covered by select-none on the station.
+
+    // No preventDefault here: it suppresses compatibility mouse events and
+    // freezes the glass cursor for the whole drag.
     el.setPointerCapture(e.pointerId)
     const m = getMotion(id)
     m.dragging = true
     m.moved = 0
-    // Rebuild the live set from every station actually held right now (an
-    // interchange wakes all of its lines; a second finger on another line
-    // composes). Replacing rather than adding drops any not-yet-settled
-    // previous gesture's lines — their leftover offsets still ease home on
-    // their anchor springs, they just stop transmitting.
+
     activeLines.current.clear()
     motion.current.forEach((mm, mid) => {
       if (mm.dragging) STATION_LINES.get(mid).forEach((line) => activeLines.current.add(line.id))
@@ -1089,11 +885,9 @@ export default function FlowTimeline() {
     m.startOffset = { x: m.x, y: m.y }
     m.tx = m.x
     m.ty = m.y
-    // The press itself is silent, but it is inside a gesture — so it brings
-    // the audio context up, ready for the pluck on release.
+
     sfx.unlock()
-    // A pulled station may cross a neighbour; make sure it slides over,
-    // not under. Reset once the map settles.
+
     el.style.zIndex = '10'
     startLoop()
   }
@@ -1102,16 +896,11 @@ export default function FlowTimeline() {
     const m = getMotion(id)
     if (!m.dragging) return
 
-    // Distinguishes a click from a drag at release time. Peak travel, not
-    // final position, so an out-and-back drag never counts as a click.
     m.moved = Math.max(
       m.moved,
       Math.hypot(e.clientX - m.startPointer.x, e.clientY - m.startPointer.y)
     )
 
-    // Only the target moves here. The station itself catches up in the
-    // shared loop's viscous follow — that deliberate lag is the fluid feel,
-    // so nothing is written to the DOM from the pointer event.
     const next = rubber(
       m.startOffset.x + (e.clientX - m.startPointer.x),
       m.startOffset.y + (e.clientY - m.startPointer.y)
@@ -1131,25 +920,16 @@ export default function FlowTimeline() {
     }
     startLoop()
 
-    // A press that never became a drag is a click: it opens the modal on
-    // the instrument's lowest note — strength 0 is the bottom of the same
-    // ladder the drags play, so a plain click is the root the stretches
-    // rise from.
     if (m.moved < CLICK_SLOP) {
       sfx.snap(0)
-      // The modal's step buttons climb from wherever the cursor is; a fresh
-      // open starts them from the root just played.
+
       sfx.pluckReset()
       openModal(NODE_BY_ID.get(id))
     } else {
-      // The pluck's pitch and weight scale with how far the elastic was
-      // stretched at release, plus a little of the flick speed.
       sfx.snap(Math.min(1, (Math.hypot(m.x, m.y) + 0.06 * Math.hypot(m.vx, m.vy)) / stretchFull()))
     }
   }
 
-  // Scale the unit-grid layout to the column. Same factor on both axes, so
-  // every 45° stays exactly 45°; the map's height follows from its width.
   const W = mapW || 452
   const scale = (W - 2 * MARGIN_X) / Math.max(UX1 - UX0, 1e-6)
   const mapH = (UY1 - UY0) * scale + 2 * PAD_Y
@@ -1160,8 +940,6 @@ export default function FlowTimeline() {
   const REST = new Map([...POS].map(([id, p]) => [id, toPx(p)]))
   geomRef.current = {
     lines: LINES.map((line, li) => {
-      // A bare trunk has no stations; its full-track ribbon comes straight
-      // from the generator's route.
       if (line.stations.length === 0 && LAY.kinds.get(line.id) === 'trunk') {
         const P = BUILT.routes[li].P.map(toPx)
         return P.length >= 2
@@ -1176,23 +954,18 @@ export default function FlowTimeline() {
     }),
   }
 
-  // The open station's lines (for the modal's colour bar) and its route
-  // neighbours (for the back/next buttons).
   const servedLines = active ? STATION_LINES.get(active.id) : []
   const steps = active ? stepsFrom(active.id) : { back: [], next: [] }
 
   return (
     <div>
-      {/* Deliberately double the mt-10 rhythm of the subtitles above: the
-          map is a different kind of content, and the extra air sets it
-          apart from the text sections. */}
+
       <h2 className="mt-20 text-sm font-medium text-gray-900 dark:text-gray-100">metro map</h2>
 
       <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
         click on a station to view more... or just drag them around for fun :)
       </p>
 
-      {/* Switch for the station names, sitting top-left above the map. */}
       <div className="mt-6 flex items-center">
         <button
           type="button"
@@ -1202,8 +975,7 @@ export default function FlowTimeline() {
           className="flex items-center gap-2 text-[11px] text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
         >
           labels
-          {/* Track and knob sized so the knob's travel is exactly the
-              track's free run: 24 − 10 − 2·2 inset = 10px. */}
+
           <span
             aria-hidden="true"
             className={`relative h-3.5 w-6 rounded-full transition-colors duration-200 ${labelsOn ? 'bg-gray-700 dark:bg-gray-300' : 'bg-gray-300 dark:bg-gray-700'}`}
@@ -1216,9 +988,7 @@ export default function FlowTimeline() {
       </div>
 
       <div ref={gridRef} className="relative mt-6" style={{ height: mapH }}>
-        {/* Ribbons live behind the stations: the station wrappers are
-            positioned, so the white discs paint on top of the colour, the
-            way stops sit punched into a metro line. */}
+
         <svg aria-hidden="true" className="absolute inset-0 h-full w-full overflow-visible pointer-events-none">
           {LINES.map((line, i) => (
             <path
@@ -1249,9 +1019,7 @@ export default function FlowTimeline() {
               onPointerMove={onPointerMove(node.id)}
               onPointerUp={onPointerEnd(node.id)}
               onPointerCancel={onPointerEnd(node.id)}
-              // role="button" also enrols the station in the glass
-              // cursor's INTERACTIVE selector, so hovering gives the same
-              // cursor affordance as the site's real buttons.
+
               role="button"
               tabIndex={0}
               aria-haspopup="dialog"
@@ -1262,30 +1030,21 @@ export default function FlowTimeline() {
                 }
               }}
               className="group absolute select-none will-change-transform"
-              // The wrapper is placed so the disc's centre lands exactly on
-              // its map slot; the physics transform then rides on top
-              // without fighting any centring translate. touch-action none:
-              // a touch that starts on a station belongs to the station —
-              // the page must not scroll out from under a drag, and vertical
-              // pulls are half of what the elastic is for. Scrolling past
-              // the map from the gaps between stations still works.
+
               style={{
                 left: rest.x - meta.size / 2,
                 top: rest.y - meta.size / 2,
+                // The page must not scroll out from under a station drag.
                 touchAction: 'none',
               }}
             >
-              {/* Invisible pad growing the tap target to HIT_SIZE around
-                  the disc; pointer events on it bubble to the wrapper's
-                  handlers, so it clicks and drags like the disc itself. */}
+
               <span
                 aria-hidden="true"
                 className="absolute"
                 style={{ inset: (meta.size - HIT_SIZE) / 2 }}
               />
-              {/* Mounted Mini Metro circle: white fill, thick ink stroke.
-                  Stroke width lives in viewBox units, so every size keeps
-                  the same chunky ~14%-of-diameter weight. */}
+
               <svg
                 aria-hidden="true"
                 width={meta.size}
@@ -1295,14 +1054,7 @@ export default function FlowTimeline() {
               >
                 <circle cx="12" cy="12" r="8.5" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3.4" />
               </svg>
-              {/* One line of angled type, haloed by a soft chip so a name
-                  stays legible on the rare occasion a ribbon passes under
-                  it — the same trick as a map's white label halos. While
-                  shown it is part of the station's hit target (pointer
-                  events bubble to the wrapper); hidden, it must not keep
-                  catching clicks it no longer advertises. */}
-              {/* Smaller on phones: the map scales down with the column but
-                  type does not, so full-size names crowd the tighter grid. */}
+
               <span
                 className={`absolute whitespace-nowrap rounded-sm bg-gray-50/85 px-0.5 text-[7px] font-medium leading-tight text-gray-600 transition-opacity duration-300 dark:bg-gray-950/85 dark:text-gray-300 sm:px-1 sm:text-[9px] ${labelsOn ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                 style={labelStyle(meta.side, meta.nudge)}
@@ -1314,12 +1066,6 @@ export default function FlowTimeline() {
         })}
       </div>
 
-      {/* Portalled to the body like the art lightbox, and for the same
-          reason: a modal left inside the page would have to out-rank the
-          navbar and the hero canvas from inside a subtree that scrolls and
-          re-stacks around it. From the body it simply sits at z-[60] and is
-          done. Backdrop dim, fade and X are the lightbox's exactly.
-          Clicking the backdrop closes; clicks inside the panel stay inside. */}
       {active &&
         createPortal(
           <div
@@ -1337,9 +1083,6 @@ export default function FlowTimeline() {
               </svg>
             </button>
 
-            {/* Mini Metro's UI is flat paper: a plain white card, ink type,
-                and the network's own geometry doing the decorating — no
-                glass, no blur, no hairline borders. */}
             <div
               role="dialog"
               aria-modal="true"
@@ -1347,8 +1090,7 @@ export default function FlowTimeline() {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
             >
-              {/* The station's own map icon leads the header, so the card
-                  reads as that station opened up. */}
+
               <div className="flex items-center gap-3">
                 <svg
                   aria-hidden="true"
@@ -1362,9 +1104,7 @@ export default function FlowTimeline() {
                 <h3 className="min-w-0 truncate text-base font-semibold text-gray-900 dark:text-gray-100">{active.title}</h3>
                 <span className="ml-auto shrink-0 text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">{active.year}</span>
               </div>
-              {/* The station's line(s) as the game would draw them: one
-                  thick rounded bar per line, side by side with a breath of
-                  air between — route ribbons, not a gradient strip. */}
+
               <div className="mt-4 flex gap-1.5" aria-hidden="true">
                 {servedLines.map((l) => (
                   <span key={l.id} className="h-[7px] flex-1 rounded-full" style={{ backgroundColor: l.color }} />
@@ -1380,12 +1120,7 @@ export default function FlowTimeline() {
               {active.body && (
                 <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{active.body}</p>
               )}
-              {/* Ride the routes from inside the dialog: every previous
-                  stop on the left, every next stop on the right, one
-                  button per line at a junction, each carrying a stub of
-                  the line travelled at full ribbon weight. Swapping
-                  `active` keeps the backdrop up and just replaces the
-                  panel's content. */}
+
               {(steps.back.length > 0 || steps.next.length > 0) && (
                 <div className="mt-5 flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-col items-start gap-2">
@@ -1394,8 +1129,6 @@ export default function FlowTimeline() {
                         key={s.id}
                         type="button"
                         onClick={() => {
-                          // Backward rides the scale down, wrapping to the
-                          // top note below the root.
                           sfx.pluckStep(-1)
                           openModal(NODE_BY_ID.get(s.id))
                         }}
@@ -1416,8 +1149,6 @@ export default function FlowTimeline() {
                         key={s.id}
                         type="button"
                         onClick={() => {
-                          // Forward rides the scale up, wrapping back to the
-                          // root past the top note.
                           sfx.pluckStep(1)
                           openModal(NODE_BY_ID.get(s.id))
                         }}
