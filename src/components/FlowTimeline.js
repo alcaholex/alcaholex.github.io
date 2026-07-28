@@ -873,7 +873,6 @@ export default function FlowTimeline() {
       window.removeEventListener('keydown', onKey)
       lenis?.start()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, lenis])
 
   const getMotion = (id) => {
@@ -1040,7 +1039,6 @@ export default function FlowTimeline() {
   // runs, so the ribbons re-measure against the fresh geometry.
   useLayoutEffect(() => {
     redraw()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapW])
 
   // Scales a pull so its length approaches MAX_DRAG asymptotically: the

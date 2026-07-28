@@ -65,7 +65,6 @@ const artworks = [
     alt: 'Planets',
     description: 'A series of planet renders from our very own solar system',
     href: 'https://www.instagram.com/p/C5kCDTDA8-W/',
-    navbarTheme: 'dark',
   },
   {
     title: 'Mountainous Landscape',
@@ -337,27 +336,31 @@ export default function Art() {
           spans the full width, which is what makes it match the hero's. */}
       <h1 className="sr-only">art</h1>
       <ArtTitle />
-      <div className="container mx-auto px-4 pb-16 max-w-6xl">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="w-24 h-1 bg-gray-300 mx-auto mb-6"></div>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            some artwork i&apos;ve created:
-          </p>
-        </div>
 
+      {/* The same quiet register as the other sections' intros. Left at the
+          default layer on purpose, so the glass word still sweeps over it. */}
+      <div className="mx-auto w-full max-w-[560px] px-6">
+        <p className="text-sm leading-relaxed text-gray-500">
+          blender files always open with a &quot;default cube&quot;.
+        </p>
+        <p className="mt-4 text-sm leading-relaxed text-gray-500">
+          so i&apos;ve sculpted mountains out of a cube? 
+        </p>
+      </div>
+
+      <div className="container mx-auto mt-12 px-4 pb-16 max-w-6xl">
         {/* Art Grid. Lifted above the title's canvas (z-40) inside this
             section's z-30 stacking context, so the glass word passes behind the
             cards — and they, not the canvas, take the clicks where the two
-            overlap. Only the cards: the header above keeps its default layer so
+            overlap. Only the cards: the intro above keeps its default layer so
             the word still sweeps over that. */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-50">
           {artworks.map((art) => (
-            <div key={art.title} data-navbar-theme={art.navbarTheme ?? 'light'} className="min-h-[400px] flex items-center">
+            <div key={art.title} className="min-h-[400px] flex items-center">
               <div className="group relative w-full">
-                {/* Same shadow-sm → shadow-lg lift as the project cards, plus a
-                    slight scale so the card pops. Driven off the group rather
-                    than its own :hover so the whole card area is the trigger. */}
+                {/* Same shadow-sm → shadow-lg lift as before, plus a slight
+                    scale so the card pops. Driven off the group rather than its
+                    own :hover so the whole card area is the trigger. */}
                 <div className="bg-transparent rounded-xl overflow-hidden shadow-sm group-hover:shadow-lg group-hover:scale-[1.02] transition-all duration-300">
                   <div className="relative aspect-[9/16] bg-gray-100">
                     <img

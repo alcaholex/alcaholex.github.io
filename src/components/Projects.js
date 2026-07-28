@@ -96,7 +96,7 @@ export default function Projects() {
           piece of tech, or a work of art, i&apos;m in it for the making.
         </p>
         <p className="mt-4 text-sm leading-relaxed text-gray-500">
-          the "departures" list below is a record of the things i&apos;ve made... all aboard!
+          the &quot;departures&quot; list below is a record of the things i&apos;ve made... all aboard!
         </p>
 
         {/* Lifted above the title's canvas (z-40) inside this section's z-30
