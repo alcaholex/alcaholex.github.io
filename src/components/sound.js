@@ -1,21 +1,20 @@
-// The site's sound design, synthesized at call time — no audio files. Two
-// voices, both quiet: a plucked snap when a metro station's elastic is let
-// go, and a low airy whoosh that follows a 3D title's angular speed, however
-// the motion was caused.
+// The site's sound design, synthesized at call time — no audio files, and
+// no noise beds. Three voices, one instrument: soft dots up the pentatonic
+// ladder while a metro station's elastic is stretched, a mallet pluck on the
+// same ladder when it is let go, and a low tonal hum in the same key that
+// swells while a 3D title is turning.
 //
 // The AudioContext is created and resumed ONLY inside gesture-triggered calls
 // (snap, unlock): browsers refuse audio before a user gesture, and creating
-// the context early just logs warnings. The continuous spin() voice never
-// unlocks audio itself — it stays silent until the first grab anywhere,
-// which is inevitably the same gesture that starts the motion it would be
-// sonifying.
+// the context early just logs warnings. spin() never unlocks audio itself —
+// it stays silent until the first grab anywhere, which is inevitably the
+// same gesture that starts the motion it sonifies.
 
 const MASTER = 0.5
 
 let ctx = null
 let master = null
 let noiseBuf = null
-let spinV = null
 
 // iOS mutes plain Web Audio with the ringer switch — an AudioContext counts
 // as "ambient" sound, unlike media playback. A PLAYING media element flips
@@ -99,18 +98,20 @@ let reverbV = null
 function reverbIn() {
   if (!reverbV) {
     const rate = ctx.sampleRate
-    const len = Math.floor(rate * 1.1)
+    // A touch longer and softer-tailed than a plain room: the notes should
+    // hang the unhurried way a Mini Metro blip does.
+    const len = Math.floor(rate * 1.4)
     const buf = ctx.createBuffer(2, len, rate)
     for (let ch = 0; ch < 2; ch++) {
       const d = buf.getChannelData(ch)
       for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8)
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2)
       }
     }
     const conv = ctx.createConvolver()
     conv.buffer = buf
     const wet = ctx.createGain()
-    wet.gain.value = 0.5
+    wet.gain.value = 0.45
     conv.connect(wet)
     wet.connect(master)
     reverbV = conv
@@ -132,61 +133,62 @@ function noiseSource() {
   return src
 }
 
-// Letting the elastic go: still a simple imitation — oscillators and
-// envelopes, no feedback anywhere — but with the three tells that make a
-// pluck read as a pluck and a band read as rubber. The attack carries a tiny
-// pick tick of noise; the filter opens bright and darkens fast, the way a
-// real string sheds its high partials first; and the pitch is alive — it
-// starts a touch sharp, settles as the band relaxes, and wobbles on a damped
-// vibrato that dies within a third of a second. Strength 0–1 sets the pitch:
-// the further from home the station was released, the higher the pluck, with
-// a whisper of random detune so repeated releases do not ring identically.
-// The whole thing takes a send into the shared room, so the twang hangs in
-// the air for a moment instead of stopping dead.
+// The pluck's instrument, tuned the Mini Metro way: releases are clamped to
+// a MAJOR PENTATONIC ladder — the wind-chime scale, in which no two notes
+// can clash, so a flurry of releases rippling down a line lands as a chord,
+// never a dissonance. ROOT moves the whole instrument (220 = A3, the soft
+// mallet register); OCTAVES sets its reach.
+const PLUCK_ROOT = 220
+const PLUCK_OCTAVES = 2
+const SCALE = [0, 2, 4, 7, 9]
+const PLUCK_NOTES = []
+for (let oct = 0; oct < PLUCK_OCTAVES; oct++) {
+  for (const st of SCALE) PLUCK_NOTES.push(PLUCK_ROOT * Math.pow(2, oct + st / 12))
+}
+PLUCK_NOTES.push(PLUCK_ROOT * Math.pow(2, PLUCK_OCTAVES))
+
+// Letting a station go, voiced like a Mini Metro interaction: a soft mallet
+// note rather than a twang. A pure sine fundamental with the quiet
+// fourth-harmonic knock of a marimba bar, a felt-soft attack, and no pitch
+// theatrics — the note is stable, and only a few cents of jitter keep
+// repeats from ringing identically. Strength 0–1 picks the note: the
+// further from home the station was released, the higher up the ladder. A
+// send into the shared room lets each note hang for a beat, which is most
+// of the game-like calm.
 export function snap(strength = 0.5) {
   if (!ensure(true)) return
   const t = ctx.currentTime
   const k = Math.max(0, Math.min(1, strength))
-  // Squared, so the pitch map is bottom-heavy: most releases are small or
-  // middling stretches, and the curve keeps those plucks deep — a mid-way
-  // release lands only a quarter of the way up the range, and the top notes
-  // are saved for a genuinely full pull.
-  const freq = (10 + 500 * k * k) * (1 + (Math.random() - 0.5) * 0.06)
+  // Straight map: stretch walks the ladder evenly from bottom to top. The
+  // jitter is a few CENTS of humanization, so repeats do not ring
+  // identically but every pluck still lands squarely on its note.
+  const note = PLUCK_NOTES[Math.round(k * (PLUCK_NOTES.length - 1))]
+  const freq = note * (1 + (Math.random() - 0.5) * 0.008)
 
-  // Everything sums through this filter, whose closing sweep is the spectral
-  // decay; a slice of the sum goes to the room.
+  // Everything sums through this filter; a gentle close rounds the tail off.
+  // A slice of the sum goes to the room.
   const lp = ctx.createBiquadFilter()
   lp.type = 'lowpass'
-  lp.frequency.setValueAtTime(2400 + 1400 * k, t)
-  lp.frequency.exponentialRampToValueAtTime(700, t + 0.28)
-  lp.Q.value = 0.7
+  lp.frequency.setValueAtTime(1900 + 900 * k, t)
+  lp.frequency.exponentialRampToValueAtTime(900, t + 0.3)
+  lp.Q.value = 0.5
   lp.connect(master)
   const send = ctx.createGain()
   send.gain.value = 0.4
   lp.connect(send)
   send.connect(reverbIn())
 
-  // The rubber wobble: a damped vibrato shared by both partials.
-  const lfo = ctx.createOscillator()
-  lfo.frequency.value = 13
-  const lfoDepth = ctx.createGain()
-  lfoDepth.gain.setValueAtTime(freq * 0.07, t)
-  lfoDepth.gain.exponentialRampToValueAtTime(0.01, t + 0.3)
-  lfo.connect(lfoDepth)
-  lfo.start(t)
-  lfo.stop(t + 0.45)
-
-  // Fundamental, and a quieter octave that dies faster — the bright edge of
-  // the pluck without any lasting buzz. Each starts ~16% sharp and settles:
-  // the band snapping back to its resting tension.
-  for (const [mult, peak, decay] of [[1, 0.08 + 0.07 * k, 0.38], [2, 0.03, 0.14]]) {
+  // Mallet voicing: a pure fundamental, plus the quiet fourth-harmonic "bar
+  // mode" that gives a marimba its knock, dying an order of magnitude
+  // faster. The 5ms ramp on the way in is the felt of the mallet — an
+  // instantaneous start reads as a click, not a tap.
+  for (const [mult, peak, decay] of [[1, 0.28 + 0.12 * k, 0.5], [4, 0.06, 0.09]]) {
     const o = ctx.createOscillator()
-    o.type = 'triangle'
-    o.frequency.setValueAtTime(freq * mult * 1.16, t)
-    o.frequency.exponentialRampToValueAtTime(freq * mult, t + 0.07)
-    lfoDepth.connect(o.frequency)
+    o.type = 'sine'
+    o.frequency.value = freq * mult
     const g = ctx.createGain()
-    g.gain.setValueAtTime(peak, t)
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(peak, t + 0.005)
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay)
     o.connect(g)
     g.connect(lp)
@@ -194,53 +196,162 @@ export function snap(strength = 0.5) {
     o.stop(t + decay + 0.05)
   }
 
-  // The pick: a bandpassed tick of noise, gone in twenty milliseconds.
+  // A pluck ends the gesture, so the next stretch starts a fresh preview.
+  stretchIdx = -1
+  stretchAt = 0
+
+  // The contact: a woody tap of low bandpassed noise — mallet on bar, not
+  // pick on string — gone in fifteen milliseconds.
   const n = noiseSource()
   const bp = ctx.createBiquadFilter()
   bp.type = 'bandpass'
-  bp.frequency.value = 2300
-  bp.Q.value = 1.5
+  bp.frequency.value = 850
+  bp.Q.value = 1
   const ng = ctx.createGain()
-  ng.gain.setValueAtTime(0.02 + 0.02 * k, t)
-  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.02)
+  ng.gain.setValueAtTime(0.05 + 0.03 * k, t)
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.015)
   n.connect(bp)
   bp.connect(ng)
   ng.connect(lp)
   n.start(t)
-  n.stop(t + 0.04)
+  n.stop(t + 0.03)
 }
 
-// A title in motion: a low, airy push of band-limited noise — more moving air
-// than hiss, sitting well under the page. Call with angular speed (rad/s)
-// every frame there IS motion; loudness and (gently) brightness follow the
-// speed, and silence is handled by the watchdog rather than by callers — a
-// paused canvas just stops calling, and the voice fades itself out. One
-// shared voice on purpose: only one title is ever meaningfully moving, and
-// idle canvases never call in (the components threshold at ~0.02 rad/s).
-export function spin(speed) {
+// Stretching the elastic previews the instrument, the way drawing a line in
+// Mini Metro steps through notes: each rung of the pentatonic ladder crossed
+// plays one small soft dot — up as the band is pulled, back down as it is
+// let in — and because the release pluck picks its note from the same
+// distance, the last dot heard is the note the pluck will land on. Dots are
+// quieter and shorter than a pluck so the release stays the event. Call
+// every frame of a drag with the normalized stretch (0–1); a gap in the
+// calls starts a fresh preview, silently.
+const STRETCH_GAP_MS = 300
+const STRETCH_MIN_MS = 40
+let stretchIdx = -1
+let stretchAt = 0
+let stretchBlipAt = 0
+
+export function stretchTo(amount) {
   if (!ctx || ctx.state !== 'running' || !master) return
-  if (!spinV) {
-    const src = noiseSource()
-    const bp = ctx.createBiquadFilter()
-    bp.type = 'bandpass'
-    bp.Q.value = 0.9
-    bp.frequency.value = 200
-    const g = ctx.createGain()
-    g.gain.value = 0
-    src.connect(bp)
-    bp.connect(g)
-    g.connect(master)
-    src.start()
-    spinV = { bp, g, last: 0 }
-    setInterval(() => {
-      if (spinV && performance.now() - spinV.last > 200) {
-        spinV.g.gain.setTargetAtTime(0, ctx.currentTime, 0.1)
-      }
-    }, 120)
+  const now = performance.now()
+  const fresh = now - stretchAt > STRETCH_GAP_MS
+  stretchAt = now
+  const idx = Math.round(
+    Math.max(0, Math.min(1, amount)) * (PLUCK_NOTES.length - 1)
+  )
+  // A new gesture adopts its starting rung without sounding it; a fast drag
+  // that crosses several rungs in one frame plays only the one it lands on.
+  if (fresh || idx === stretchIdx) {
+    stretchIdx = idx
+    return
   }
-  spinV.last = performance.now()
-  const s = Math.abs(speed)
-  const level = Math.min(0.1, s * 0.014)
-  spinV.g.gain.setTargetAtTime(level < 0.002 ? 0 : level, ctx.currentTime, 0.07)
-  spinV.bp.frequency.setTargetAtTime(50 + Math.min(100, s * 30), ctx.currentTime, 0.09)
+  stretchIdx = idx
+  if (now - stretchBlipAt < STRETCH_MIN_MS) return
+  stretchBlipAt = now
+
+  const t = ctx.currentTime
+  const freq = PLUCK_NOTES[idx] * (1 + (Math.random() - 0.5) * 0.008)
+  const send = ctx.createGain()
+  send.gain.value = 0.3
+  send.connect(reverbIn())
+  const o = ctx.createOscillator()
+  o.type = 'sine'
+  o.frequency.value = freq
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.linearRampToValueAtTime(0.05, t + 0.004)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11)
+  o.connect(g)
+  g.connect(master)
+  g.connect(send)
+  o.start(t)
+  o.stop(t + 0.16)
 }
+
+// A title in motion HUMS: a soft major-triad drone on the same A the mallet
+// is tuned to, swelling from silence with rotation speed — the register of
+// Mini Metro's own ambient pads, where a running train is a sustained tone,
+// not a noise or a click track. The pitch never moves; speed speaks only
+// through volume and assembly. The chord builds with speed: a slow turn is
+// a bare low hum, the fifth opens above it as the word gets going, the
+// major third fills the triad at a proper spin, and the octave crowns the
+// chord only at a genuinely hard one — so the harmony itself is the
+// speedometer, four notes deep. Just-intonation intervals (3/2, 5/4, 2/1),
+// which pure sines reward: the chord locks with zero beating. No
+// noise, no ticking, no melody. The voice is persistent and a watchdog
+// fades it once the calls stop — a paused canvas just goes quiet.
+const DRONE_ROOT = 220
+let droneV = null
+let droneCallAt = 0
+
+export function spin(delta) {
+  if (!ctx || ctx.state !== 'running' || !master) return
+  // Speed from the spacing of the calls themselves, so it is frame-rate
+  // independent: travel per frame over time per frame.
+  const now = performance.now()
+  const dt = Math.min(0.1, Math.max(0.008, (now - droneCallAt) / 1000))
+  droneCallAt = now
+  const s = Math.min(6, Math.abs(delta) / dt)
+
+  if (!droneV) {
+    const make = (freq) => {
+      const o = ctx.createOscillator()
+      o.type = 'sine'
+      o.frequency.value = freq
+      const g = ctx.createGain()
+      g.gain.value = 0
+      o.connect(g)
+      g.connect(master)
+      o.start()
+      return { o, g }
+    }
+    const root = make(DRONE_ROOT)
+    const third = make(DRONE_ROOT * 1.25)
+    const fifth = make(DRONE_ROOT * 1.5)
+    const octave = make(DRONE_ROOT * 2)
+    // A little of the shared room softens the hum's edges.
+    const send = ctx.createGain()
+    send.gain.value = 0.25
+    root.g.connect(send)
+    third.g.connect(send)
+    fifth.g.connect(send)
+    octave.g.connect(send)
+    send.connect(reverbIn())
+    droneV = { root, third, fifth, octave, last: 0 }
+    setInterval(() => {
+      if (droneV && performance.now() - droneV.last > 160) {
+        droneV.root.g.gain.setTargetAtTime(0, ctx.currentTime, 0.12)
+        droneV.third.g.gain.setTargetAtTime(0, ctx.currentTime, 0.12)
+        droneV.fifth.g.gain.setTargetAtTime(0, ctx.currentTime, 0.12)
+        droneV.octave.g.gain.setTargetAtTime(0, ctx.currentTime, 0.12)
+      }
+    }, 100)
+  }
+  droneV.last = now
+
+  const t = ctx.currentTime
+  const level = Math.min(0.11, s * 0.04)
+  droneV.root.g.gain.setTargetAtTime(level < 0.002 ? 0 : level, t, 0.09)
+  droneV.fifth.g.gain.setTargetAtTime(
+    level < 0.002 ? 0 : level * 0.55 * Math.min(1, s / 2.5),
+    t,
+    0.09
+  )
+  // The third joins next — quieter than the fifth, and only once the word
+  // is properly spinning.
+  droneV.third.g.gain.setTargetAtTime(
+    level < 0.002 ? 0 : level * 0.4 * Math.min(1, Math.max(0, (s - 1.2) / 2.2)),
+    t,
+    0.09
+  )
+  // And the octave crowns it, arriving only at a genuinely hard spin — the
+  // fourth voice that turns the triad into a full close-out.
+  droneV.octave.g.gain.setTargetAtTime(
+    level < 0.002 ? 0 : level * 0.35 * Math.min(1, Math.max(0, (s - 2.5) / 2.5)),
+    t,
+    0.09
+  )
+  // No speed-glide: the chord sits fixed on its root, and speed speaks only
+  // through volume and how much of the chord has assembled.
+}
+

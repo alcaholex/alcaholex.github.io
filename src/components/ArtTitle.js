@@ -79,18 +79,18 @@ function AutoResetOrbitControls() {
   }
 
   useFrame((state, delta) => {
-    // Sonify the word's motion: angular speed drives the shared whoosh, so a
-    // hand-spin and the ease home stir the same air the same way. Only real
-    // motion calls in — the module's watchdog handles the fade to silence, so
-    // an idle or paused canvas never fights the one that is moving.
+    // Sonify the word's motion the Mini Metro way: rotation is strummed.
+    // Each frame hands the module its signed angular travel, and the module
+    // plays one soft pentatonic step per increment — up the ladder one way,
+    // down the other — for a hand-spin and the ease home alike.
     const c = controlsRef.current
     if (c && delta > 0) {
       const az = c.getAzimuthalAngle()
       const pol = c.getPolarAngle()
       if (prevAngles.current) {
-        const speed =
-          Math.hypot(az - prevAngles.current.az, pol - prevAngles.current.pol) / delta
-        if (speed > 0.02) sfx.spin(speed)
+        const dAz = az - prevAngles.current.az
+        const d = Math.hypot(dAz, pol - prevAngles.current.pol)
+        if (d > 0.0005) sfx.spin(dAz >= 0 ? d : -d)
       }
       prevAngles.current = { az, pol }
     }

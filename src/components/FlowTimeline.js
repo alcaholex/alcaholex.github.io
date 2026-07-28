@@ -720,8 +720,10 @@ const CLICK_SLOP = 5
 
 // The discs are tiny targets (5–15px); an invisible pad centred on each
 // one grows the pressable square to this size. The station's name joins
-// the target too, whenever labels are switched on.
-const HIT_SIZE = 26
+// the target too, whenever labels are switched on. Sized just under the
+// map's one-unit station spacing at phone width (~40px), so neighbouring
+// pads meet without meaningfully overlapping.
+const HIT_SIZE = 38
 
 // Backdrop fade duration — matches the art lightbox's transition, and the
 // unmount is delayed by the same amount so the exit fade gets to play.
@@ -960,6 +962,10 @@ export default function FlowTimeline() {
             m.vx = (m.x - px) / dt
             m.vy = (m.y - py) / dt
           }
+          // The stretch previews the instrument: same normalization as the
+          // release pluck, so the last dot heard is the note the letting-go
+          // will land on. The module only sounds when a rung is crossed.
+          sfx.stretchTo(Math.hypot(m.x, m.y) / 260)
           return
         }
         // A station that also serves a line outside the live set holds
