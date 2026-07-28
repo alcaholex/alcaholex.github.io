@@ -17,10 +17,52 @@ let master = null
 let noiseBuf = null
 let spinV = null
 
+// iOS mutes plain Web Audio with the ringer switch — an AudioContext counts
+// as "ambient" sound, unlike media playback. A PLAYING media element flips
+// the page's whole audio session into the playback category, ringer switch
+// and all — so a silent, looping <audio> element started inside the same
+// first gesture is what lets the synth be heard on a phone set to silent.
+// The clip is 50ms of zeroed PCM generated right here; nothing is downloaded
+// and nothing is audible from the element itself.
+let keeper = null
+function keepAlive() {
+  if (typeof document === 'undefined') return
+  if (!keeper) {
+    const rate = 8000
+    const samples = 400
+    const buf = new ArrayBuffer(44 + samples * 2)
+    const v = new DataView(buf)
+    const tag = (off, s) => {
+      for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i))
+    }
+    tag(0, 'RIFF')
+    v.setUint32(4, 36 + samples * 2, true)
+    tag(8, 'WAVE')
+    tag(12, 'fmt ')
+    v.setUint32(16, 16, true)
+    v.setUint16(20, 1, true)
+    v.setUint16(22, 1, true)
+    v.setUint32(24, rate, true)
+    v.setUint32(28, rate * 2, true)
+    v.setUint16(32, 2, true)
+    v.setUint16(34, 16, true)
+    tag(36, 'data')
+    v.setUint32(40, samples * 2, true)
+    keeper = document.createElement('audio')
+    keeper.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }))
+    keeper.loop = true
+    keeper.setAttribute('playsinline', '')
+  }
+  // iOS pauses the element whenever the page is backgrounded, which drops the
+  // session back to ambient — so every gesture re-arms it if needed.
+  if (keeper.paused) keeper.play().catch(() => {})
+}
+
 function ensure(fromGesture) {
   if (typeof window === 'undefined') return null
   const AC = window.AudioContext || window.webkitAudioContext
   if (!AC) return null
+  if (fromGesture) keepAlive()
   if (!ctx && fromGesture) {
     ctx = new AC()
     // A gentle compressor on the bus, so overlapping plucks sum politely
@@ -105,7 +147,11 @@ export function snap(strength = 0.5) {
   if (!ensure(true)) return
   const t = ctx.currentTime
   const k = Math.max(0, Math.min(1, strength))
-  const freq = (10 + 500 * k) * (1 + (Math.random() - 0.5) * 0.06)
+  // Squared, so the pitch map is bottom-heavy: most releases are small or
+  // middling stretches, and the curve keeps those plucks deep — a mid-way
+  // release lands only a quarter of the way up the range, and the top notes
+  // are saved for a genuinely full pull.
+  const freq = (10 + 500 * k * k) * (1 + (Math.random() - 0.5) * 0.06)
 
   // Everything sums through this filter, whose closing sweep is the spectral
   // decay; a slice of the sum goes to the room.
