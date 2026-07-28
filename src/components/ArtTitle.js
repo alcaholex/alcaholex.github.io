@@ -225,9 +225,7 @@ export default function ArtTitle({ modelPath = "/models/art.glb" }) {
     // exactly as on the hero: layered above the sections (z-40 > z-30) on a
     // transparent canvas, the word is free to spill over the content below
     // rather than being cut off at the title's own edge.
-    // data-navbar-full keeps the nav expanded while this screen is the one being
-    // looked at, again matching the hero.
-    <div ref={containerRef} data-navbar-full className="relative w-full h-screen shrink-0">
+    <div ref={containerRef} className="relative w-full h-screen shrink-0">
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}

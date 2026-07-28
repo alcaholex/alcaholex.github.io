@@ -34,12 +34,6 @@ body {
   overflow-x: clip;
 }
 
-/* One family site-wide now, so this exists only for the places that ask for the
-   display face by name (the loading wordmark). */
-.font-display {
-  font-family: var(--font-stack);
-}
-
 /* The navbar alone stays on Montserrat, the face the site was set in before it
    moved to Helvetica. It sits over the page rather than in it, so a different
    family reads as chrome instead of as an inconsistency. */
@@ -65,23 +59,6 @@ html.is-loading .glass-cursor-dot {
   opacity: 0 !important;
 }
 
-/* Loading wordmark. Each letter is a vertical column of candidate glyphs inside
-   a one-glyph window, stepped through by this transform animation — so the
-   scramble is a compositor animation rather than JS rewriting text. That is the
-   whole point: during load the main thread is busy parsing models and compiling
-   transmission shaders, and anything driven by setInterval or React would stall
-   in exactly the stretch the loader is meant to cover.
-
-   -100% is the column's own height, so steps() lands on each glyph in turn and
-   this stays correct however many candidates there are. */
-@keyframes scramble {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-100%);
-  }
-}
 
 /* Lenis smooth scroll: let the library own the scroll animation. */
 html.lenis,

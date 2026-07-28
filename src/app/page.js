@@ -37,29 +37,35 @@ export default function Home() {
               left-aligned: small faint-gray body copy under minimal
               same-size subtitles, and label/value rows where the value sits
               flush right in an even fainter gray. */}
-          {/* pt-12 is as high as the column can start: any less and the
-              navbar's collapsed handle — which hangs from the top edge at
-              centre, right over this column — lands on the first line. */}
-          <div className="mx-auto w-full max-w-[500px] px-6 pt-12 pb-16">
+          {/* As high as the column can start. The route strip is fixed at the
+              top centre — directly over this column — and runs to about 52px,
+              so this is that plus a little air. */}
+          <div className="mx-auto w-full max-w-[500px] px-6 pt-16 pb-16">
             <p className="text-sm leading-relaxed text-gray-500">
               i&apos;m a high school student with a passion for design, technology, and engineering.
             </p>
             <p className="mt-4 text-sm leading-relaxed text-gray-500">
-              i take pride in my ability to learn quickly and adapt to new challenges, which has allowed me to explore a wide range of interests and develop a diverse skillset.
+              i pick things up quickly, so i seldom stop at one. it&apos;s why i listed three passions; most of what i make sits somewhere between them.
             </p>
 
-            <h2 className="mt-10 text-sm font-medium text-gray-900">currently</h2>
-            <p className="mt-4 text-sm leading-relaxed text-gray-500">building a castle</p>
+            {/* Lifted for the same reason as the links below, and now the more
+                urgent of the two: sitting this high in the column puts the
+                map's top half inside the hero canvas's reach, and every station
+                there would be undraggable until the page scrolled a full
+                viewport. */}
+            <div className="relative z-40">
+              <FlowTimeline />
+            </div>
 
-            <h2 className="mt-10 text-sm font-medium text-gray-900">elsewhere</h2>
-            {/* The one thing that outranks the hero canvas. That canvas is
+            <h2 className="mt-20 text-sm font-medium text-gray-900">elsewhere</h2>
+            {/* The other thing that outranks the hero canvas. That canvas is
                 z-40 and 1.5 screens tall, so its empty lower half lies over
-                this part of the column and would swallow every click and hover
-                here while the page is still inside the first viewport. z-40
-                rather than higher on purpose: equal z-index resolves by DOM
-                order, so this lands above the canvas (earlier in the document)
-                yet still below the swipe-in panels (later), which must be able
-                to sweep over this section. */}
+                this column and would swallow every click and hover inside it
+                while the page is still within the first viewport. z-40 rather
+                than higher on purpose: equal z-index resolves by DOM order, so
+                this lands above the canvas (earlier in the document) yet still
+                below the swipe-in panels (later), which must be able to sweep
+                over this section. */}
             <div className="relative z-40 mt-4">
               {SOCIALS.map((social) => (
                 <div key={social.label} className="flex items-center justify-between py-0.5">
@@ -75,8 +81,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-
-            <FlowTimeline />
           </div>
         </section>
         {/* Projects swipes in from the right and art from the left, once the

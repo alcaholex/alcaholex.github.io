@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLenis } from './SmoothScroll'
 
-// Everything lives on the home page again: projects and art swipe in as
-// scroll sections. Hashes let each link also work when landing from another
-// route (e.g. the old /projects/ redirect): navigate home, then the pathname
-// effect below scrolls to the section once it mounts.
+// The stops on the line, in the order you ride them. Everything lives on the
+// home page: projects and art swipe in as scroll sections. Hashes let each link
+// also work when landing from another route (e.g. the old /projects/ redirect):
+// navigate home, then the pathname effect below scrolls to the section once it
+// mounts.
 const navItems = [
   { href: '/', label: 'home', scrollTo: 'section-1' },
   { href: '/#section-2', label: 'about', scrollTo: 'section-2' },
@@ -16,28 +17,38 @@ const navItems = [
   { href: '/#section-4', label: 'art', scrollTo: 'section-4' },
 ]
 
-// Shared box model so the transparent hit-target links (inside the pill) and
-// the visible blend overlay (at body level) line up exactly. Keep these
-// identical. Tighter on mobile so the bar is thinner; full size from md up.
-const ITEM_CLASS = 'px-3 py-2 md:px-4 rounded-full text-sm font-medium'
-const ROW_CLASS = 'flex items-center space-x-2 md:space-x-6'
+// Height of the dot band the line runs through, and of the whole diagram once
+// the names are sitting under it. Stations are spaced by --pitch, set on the
+// container so it can widen at md without any of this needing to know.
+const DOT_BAND = 12
+const DIAGRAM_H = 32
 
+// Masks for the blur band below. Each layer is fully opaque for its first
+// stretch and then ramps out, so what fades is the blur itself rather than a
+// visible edge.
+const FADE_FULL = 'linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%)'
+const FADE_TOP = 'linear-gradient(to bottom, #000 0%, #000 25%, transparent 100%)'
+
+// The route strip above a carriage door: the line you are riding, every stop on
+// it, and a marker for the one you are at. It replaces the floating pill
+// entirely — the pill had to be built twice over (a transparent set of hit
+// targets inside the glass, and a mix-blend-difference copy of the labels at
+// body level) because backdrop-filter and blending cannot share an element.
+// Nothing here is glass and nothing needs to invert, so this is one layer, with
+// the links themselves carrying the marks.
+//
+// Stations sit at exact multiples of the pitch rather than being spaced by
+// their labels, which is what lets the line be two plain bars — one for the
+// whole route, one growing over it — instead of a segment per gap.
 export default function Navbar() {
   const pathname = usePathname()
   const [activeSection, setActiveSection] = useState('section-1')
-  const [highlightStyle, setHighlightStyle] = useState({})
-  // Past the hero the pill collapses to a small arrow; hovering it reveals the nav.
-  const [isHovered, setIsHovered] = useState(false)
-  // True while one of the 3D title screens is the one in view, which expands the
-  // nav the same way the hero does.
-  const [onTitleScreen, setOnTitleScreen] = useState(false)
-  const navRef = useRef(null)
-  const wrapperRef = useRef(null)
   const isNavigating = useRef(false)
   const scrollTimeoutRef = useRef(null)
 
-  // Kept in a ref so scroll handlers/effects can reach the current Lenis instance
-  // without listing it as a dependency (it starts null, then resolves once mounted).
+  // Kept in a ref so scroll handlers/effects can reach the current Lenis
+  // instance without listing it as a dependency (it starts null, then resolves
+  // once mounted).
   const lenis = useLenis()
   const lenisRef = useRef(null)
   useEffect(() => {
@@ -56,289 +67,219 @@ export default function Navbar() {
     }
   }, [])
 
-  const isItemActive = useCallback((item) => (
-    activeSection === item.scrollTo && pathname === '/'
-  ), [activeSection, pathname])
-
-  const updateHighlightPosition = useCallback(() => {
-    if (!navRef.current) return
-
-    const activeItem = navItems.find(isItemActive)
-
-    if (activeItem) {
-      const activeIndex = navItems.indexOf(activeItem)
-      const activeElement = navRef.current.children[activeIndex]
-
-      if (activeElement) {
-        const { offsetLeft, offsetWidth } = activeElement
-        setHighlightStyle({
-          left: offsetLeft,
-          width: offsetWidth,
-          opacity: 1
-        })
-      }
-    } else {
-      setHighlightStyle({ opacity: 0 })
-    }
-  }, [isItemActive])
+  const isItemActive = useCallback(
+    (item) => activeSection === item.scrollTo && pathname === '/',
+    [activeSection, pathname]
+  )
 
   const handleNavClick = (e, item) => {
-    // Collapse the pill after a tap so touch users get the arrow back.
-    setIsHovered(false)
+    // A mouse click leaves the link focused, and focus-within is what holds the
+    // names open — so without this the strip stays expanded long after the
+    // pointer has left, until something else happens to take focus. Dropped
+    // only for pointer clicks: `detail` is the click count, and it is 0 when
+    // the click came from Enter, where focus has to stay where the keyboard
+    // left it.
+    if (e.detail > 0) e.currentTarget.blur()
 
-    if (item.scrollTo && pathname === '/') {
-      e.preventDefault()
+    if (!item.scrollTo || pathname !== '/') return
+    e.preventDefault()
 
-      // Clear any existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
 
-      // Immediately update UI and prevent scroll listener interference
-      isNavigating.current = true
-      setActiveSection(item.scrollTo)
+    // Claim the target immediately so the marker moves with the click rather
+    // than trailing the scroll, and lock out the scroll listener until the
+    // travel is over.
+    isNavigating.current = true
+    setActiveSection(item.scrollTo)
 
-      const section = document.getElementById(item.scrollTo)
-      if (section) {
-        smoothScrollTo(section)
-      }
-    }
+    const section = document.getElementById(item.scrollTo)
+    if (section) smoothScrollTo(section)
   }
 
   useEffect(() => {
-    // Tracks which section is in view so the active item / highlight follow the scroll.
+    // Which stop the page is at. The last section whose top has passed the
+    // trigger line wins, rather than the first section that contains it: the
+    // gaps between sections belong to no section at all, and "the one you last
+    // arrived at" is the right answer while crossing one.
+    //
+    // Measured straight off the viewport rather than through scrollY, which is
+    // also what keeps it honest for a section riding pinned (fixed) mid-swipe:
+    // the wrapper stays in flow, so its rect is still the truth.
     const updateActiveSection = () => {
-      const scrollY = window.scrollY
-      const viewportHeight = window.innerHeight
-      const sections = document.querySelectorAll('[data-navbar-theme]')
-
-      for (const section of sections) {
-        const rect = section.getBoundingClientRect()
-        const sectionTop = scrollY + rect.top
-        const sectionBottom = sectionTop + rect.height
-
-        // More responsive detection - trigger when section is 10% visible from top
-        const triggerPoint = scrollY + viewportHeight * 0.1
-
-        if (triggerPoint >= sectionTop && triggerPoint <= sectionBottom) {
-          const sectionId = section.getAttribute('id')
-          if (sectionId && !isNavigating.current) {
-            setActiveSection(sectionId)
-          }
-          break
-        }
+      if (isNavigating.current) return
+      const trigger = window.innerHeight * 0.1
+      let current = navItems[0].scrollTo
+      for (const item of navItems) {
+        const el = document.getElementById(item.scrollTo)
+        if (el && el.getBoundingClientRect().top <= trigger) current = item.scrollTo
       }
-
-      // Same 10% line, but measured straight off the viewport. scrollY cancels
-      // out of the comparison above, so this is that rule rewritten the only way
-      // that survives a title riding inside a pinned (fixed) section mid-swipe,
-      // where scrollY + rect.top is no longer a document coordinate.
-      //
-      // The horizontal test is not redundant: a section waiting to swipe in is
-      // already pinned at top 0 and merely held offscreen sideways, so on the
-      // vertical line alone every queued title reads as "on screen" and the nav
-      // would stay open through the section before it.
-      const triggerLine = viewportHeight * 0.1
-      let onTitle = false
-      for (const title of document.querySelectorAll('[data-navbar-full]')) {
-        const rect = title.getBoundingClientRect()
-        const crossesLine = rect.top <= triggerLine && rect.bottom >= triggerLine
-        const onScreen = rect.left < window.innerWidth && rect.right > 0
-        if (crossesLine && onScreen) {
-          onTitle = true
-          break
-        }
-      }
-      setOnTitleScreen(onTitle)
+      setActiveSection(current)
     }
 
     updateActiveSection()
 
-    let ticking = false
-    let lastScrollTime = 0
+    // Coalesced to one update per frame. Deliberately NOT a time-based
+    // throttle: dropping an event outright means that if it was the last one of
+    // a gesture, the stop never updates and the marker is simply left behind —
+    // which is what made arriving at a section register only some of the time.
+    // Every event here schedules a frame, so the final position always lands.
+    let queued = false
     const handleScroll = () => {
-      const now = Date.now()
-      if (!ticking && now - lastScrollTime > 16) { // Limit to ~60fps
-        requestAnimationFrame(() => {
-          updateActiveSection()
-          ticking = false
-          lastScrollTime = now
+      if (queued) return
+      queued = true
+      requestAnimationFrame(() => {
+        queued = false
+        updateActiveSection()
 
-          // Reset navigation flag after scroll stops (debounced)
-          if (isNavigating.current) {
-            if (scrollTimeoutRef.current) {
-              clearTimeout(scrollTimeoutRef.current)
-            }
-            scrollTimeoutRef.current = setTimeout(() => {
-              isNavigating.current = false
-            }, 300) // Increased timeout to 300ms for better stability
-          }
-        })
-        ticking = true
-      }
+        // Release the navigation lock once the travel has settled.
+        if (isNavigating.current) {
+          if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+          scrollTimeoutRef.current = setTimeout(() => {
+            isNavigating.current = false
+          }, 300)
+        }
+      })
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
-
+    window.addEventListener('resize', handleScroll)
     return () => {
       window.removeEventListener('scroll', handleScroll)
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
+      window.removeEventListener('resize', handleScroll)
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
     }
   }, [pathname])
 
   // After landing on the home page via a hash link (e.g. an old /projects/
-  // redirect), start at the top (section 1) then smooth-scroll down to the
-  // target so the descent — including the swipe-in transitions — is animated,
-  // not an instant jump. Hash links set scroll={false} so Next does not
-  // pre-jump to the anchor.
+  // redirect), start at the top then smooth-scroll down to the target so the
+  // descent — including the swipe-in transitions — is animated, not an instant
+  // jump. Hash links set scroll={false} so Next does not pre-jump to the anchor.
   useEffect(() => {
     if (pathname !== '/') return
     const hash = window.location.hash.slice(1)
     if (!hash) return
-    // Highlight the target section right away and lock it so the descent past
-    // section 1 doesn't flash the "home" highlight on the way down.
     isNavigating.current = true
     setActiveSection(hash)
-    // Jump to the top instantly, then glide down so the descent is visible.
     smoothScrollTo(0, { immediate: true })
     const el = document.getElementById(hash)
     if (el) smoothScrollTo(el)
   }, [pathname, smoothScrollTo])
 
-  // Update highlight position when active section or pathname changes
-  useEffect(() => {
-    updateHighlightPosition()
-  }, [activeSection, pathname, updateHighlightPosition])
-
-  // Update highlight position on window resize
-  useEffect(() => {
-    const handleResize = () => updateHighlightPosition()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [updateHighlightPosition])
-
-  // Touch has no mouseleave, so a tap outside the pill collapses it back to the arrow.
-  useEffect(() => {
-    if (!isHovered) return
-    const handlePointerDown = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setIsHovered(false)
-      }
-    }
-    window.addEventListener('pointerdown', handlePointerDown)
-    return () => window.removeEventListener('pointerdown', handlePointerDown)
-  }, [isHovered])
-
-  // Full nav shows on any of the three 3D title screens — the hero (section-1)
-  // and the projects/art words — or whenever the collapsed handle is hovered;
-  // everywhere else it collapses to the little arrow.
-  const isHero = activeSection === 'section-1'
-  const showFull = isHero || onTitleScreen || isHovered
+  // How far down the line the journey has reached. Clamped because no stop is
+  // current when the route is not the home page.
+  const activeIndex = Math.max(0, navItems.findIndex(isItemActive))
 
   return (
     <>
-      {/* Wrapper sizes to the pill and owns the hover state. It only intercepts
-          pointer events while expanded, so the collapsed arrow (a small child
-          that stays interactive) is the only thing blocking clicks up top. */}
-      <div
-        ref={wrapperRef}
-        onMouseLeave={() => setIsHovered(false)}
-        className={`fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6 font-nav ${showFull ? 'pointer-events-auto' : 'pointer-events-none'}`}
-      >
-        {/* Collapsed handle: a little downward arrow tab hanging from the top edge. */}
-        <button
-          type="button"
-          aria-label="Show navigation"
-          onMouseEnter={() => setIsHovered(true)}
-          onClick={() => setIsHovered(true)}
-          className={`absolute top-0 left-1/2 -translate-x-1/2 rounded-b-xl px-5 pt-1 pb-1.5 backdrop-blur-xl shadow-lg shadow-black/10 border border-t-0 border-black/15 bg-black/5 transform-gpu transition-all duration-300 ${
-            showFull ? 'opacity-0 -translate-y-full pointer-events-none' : 'opacity-100 pointer-events-auto'
-          }`}
-        >
-          {/* Stroke is transparent — the visible chevron is the blend overlay
-              below, which needs to blend against the page, not this button's
-              backdrop-filter group. */}
-          <svg className="w-4 h-4 text-transparent" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+      {/* A band of blur beneath the strip, so whatever scrolls under it softens
+          instead of colliding with the diagram. No fill, no edge — the only
+          thing here is the defocus, and it ramps out before the band ends.
 
-        {/* The pill: layout, click targets, and visible labels. The nav only
-            slides; the opacity fade lives on the glass pill below. */}
-        <nav
-          onMouseEnter={() => setIsHovered(true)}
-          className={`transition-transform duration-300 ${showFull ? 'translate-y-0' : '-translate-y-3'}`}
-        >
-          {/* Always the same frosted glass as the collapsed chevron handle. The
-              opacity fade is applied HERE, on the backdrop-filter element itself,
-              rather than on an ancestor — an ancestor's fractional opacity
-              flattens the backdrop-filter into a group and drops it behind the
-              page. transform-gpu keeps it on its own compositing layer. */}
-          <div className={`rounded-full px-4 py-3 md:px-6 shadow-2xl shadow-black/10 border border-black/15 backdrop-blur-xl bg-black/5 transform-gpu transition-opacity duration-300 ${showFull ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="relative">
-              {/* Sliding highlight background */}
-              <div
-                className="absolute top-0 h-full rounded-full bg-black/10 transition-all duration-300 ease-out"
-                style={{
-                  left: highlightStyle.left,
-                  width: highlightStyle.width,
-                  opacity: highlightStyle.opacity,
-                }}
-              />
+          Two stacked layers rather than one. A single masked blur leaves
+          full-strength blur ghosting at low opacity over the sharp original
+          near the bottom, which reads as haze; a light blur across the whole
+          band with a heavier one over just the top ramps the strength itself,
+          which is what actually reads as a gradient.
 
-              <div className={`${ROW_CLASS} relative z-10`} ref={navRef}>
-                {navItems.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    // Hash links manage their own scroll (top first, then down),
-                    // so suppress Next's automatic jump to the anchor.
-                    scroll={item.href.includes('#') ? false : undefined}
-                    onClick={(e) => handleNavClick(e, item)}
-                    className={`${ITEM_CLASS} text-transparent`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        </nav>
-      </div>
-
-      {/* Visible labels — built to match the proven test exactly: a single fixed
-          element (blend group = page root) with mix-blend-difference and text
-          directly on it, and plain padded span children. No nested wrapper, no
-          per-span opacity — an opacity < 1 child makes its own group and breaks
-          the blend, which is what left the text stuck white. Positioned over the
-          pill; the transparent border matches the pill's border for alignment,
-          and pointer-events pass through to the real links beneath. Mirrors the
-          pill's slide and fade so the two never separate. */}
+          z-45 puts it over the hero canvas and the swipe-in panels (both z-40)
+          so it blurs those too, while staying under the strip at z-50. */}
       <div
         aria-hidden="true"
-        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[60] pt-6 font-nav pointer-events-none text-white mix-blend-difference transition-all duration-300 ${showFull ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'}`}
+        className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-24"
       >
-        <div className={`px-4 py-3 md:px-6 border border-transparent ${ROW_CLASS}`}>
-          {navItems.map((item) => (
-            <span key={item.label} className={ITEM_CLASS}>
-              {item.label}
-            </span>
-          ))}
+        <div
+          className="absolute inset-0 backdrop-blur-[3px]"
+          style={{ maskImage: FADE_FULL, WebkitMaskImage: FADE_FULL }}
+        />
+        <div
+          className="absolute inset-x-0 top-0 h-2/3 backdrop-blur-[10px]"
+          style={{ maskImage: FADE_TOP, WebkitMaskImage: FADE_TOP }}
+        />
+      </div>
+
+      <nav
+        aria-label="Sections"
+        // Named groups because the stops are groups of their own: hovering
+        // anywhere on the strip brings up every name, while the dot under the
+        // pointer is the only one that reacts.
+        className="group/nav fixed left-1/2 top-0 z-50 -translate-x-1/2 pt-5 font-nav"
+      >
+        <div
+          className="relative [--pitch:72px] md:[--pitch:96px]"
+          style={{
+            width: `calc(var(--pitch) * ${navItems.length - 1})`,
+            height: DIAGRAM_H,
+          }}
+        >
+        {/* Track ahead, in the faint grey of a line not yet ridden. It runs
+            station to station, so it stops at the terminals instead of trailing
+            off past them. */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 h-[1.5px] -translate-y-1/2 rounded-full bg-gray-300"
+          style={{ top: DOT_BAND / 2 }}
+        />
+        {/* Track behind: the same line in ink, growing across to the stop you
+            are at. Slower than the marker on purpose — the line arriving a beat
+            after you do reads as travel rather than as a state change. */}
+        <span
+          aria-hidden="true"
+          className="absolute left-0 h-[1.5px] -translate-y-1/2 rounded-full bg-gray-900 transition-all duration-500 ease-out"
+          style={{ top: DOT_BAND / 2, width: `calc(var(--pitch) * ${activeIndex})` }}
+        />
+
+        {navItems.map((item, i) => {
+          const isActive = isItemActive(item)
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              // Hash links manage their own scroll (top first, then down), so
+              // suppress Next's automatic jump to the anchor.
+              scroll={item.href.includes('#') ? false : undefined}
+              onClick={(e) => handleNavClick(e, item)}
+              aria-current={isActive ? 'page' : undefined}
+              // Centred on its station, so the padding that makes it a decent
+              // touch target grows outwards and never shifts the diagram.
+              className="group/stop absolute top-0 flex -translate-x-1/2 flex-col items-center px-2"
+              style={{ left: `calc(var(--pitch) * ${i})` }}
+            >
+              <span
+                className="flex items-center justify-center"
+                style={{ height: DOT_BAND }}
+              >
+                {/* The stop you are at is the map's interchange, part for part:
+                    a white disc with a thin ink ring, big enough to sit over the
+                    line and interrupt it. The rest are ordinary stops, and they
+                    darken on hover so the whole column reads as one target. */}
+                <span
+                  className={`block rounded-full transition-all duration-300 ease-out ${
+                    isActive
+                      ? 'h-[11px] w-[11px] border-[1.5px] border-gray-900 bg-white'
+                      : 'h-[5px] w-[5px] bg-gray-400 group-hover/stop:bg-gray-900'
+                  }`}
+                />
+              </span>
+              {/* Names are the diagram's detail, not its substance — the line
+                  and the marker already say where you are, so the text only
+                  comes up when you go looking for it. Faded rather than
+                  removed: it keeps its space, so nothing shifts on reveal, and
+                  it stays in the accessibility tree throughout. focus-within
+                  brings it back for keyboard users, who get no hover. */}
+              <span
+                className={`mt-1.5 whitespace-nowrap text-[11px] opacity-0 transition-all duration-300 group-focus-within/nav:opacity-100 group-hover/nav:opacity-100 ${
+                  isActive
+                    ? 'font-medium text-gray-900'
+                    : 'text-gray-500 group-hover/stop:text-gray-900'
+                }`}
+              >
+                {item.label}
+              </span>
+              </Link>
+            )
+          })}
         </div>
-      </div>
-
-      {/* The collapsed handle's chevron, same treatment: geometry mirrors the
-          handle button exactly, visible whenever the handle is. */}
-      <div
-        aria-hidden="true"
-        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[60] px-5 pt-1 pb-1.5 border border-t-0 border-transparent pointer-events-none text-white mix-blend-difference transition-all duration-300 ${showFull ? 'opacity-0 -translate-y-full' : 'opacity-100'}`}
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
+      </nav>
     </>
   )
 }

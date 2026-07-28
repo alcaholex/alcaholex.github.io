@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLenis } from './SmoothScroll'
 
-// The nudge to keep scrolling, wearing the navbar's frosted glass so the two
-// read as the same set of controls. Sits at the bottom of whichever title
+// The nudge to keep scrolling: a bare chevron, no frame behind it. Sits at the
+// bottom of whichever title
 // screen renders it — the hero, projects or art — and on click scrolls exactly
 // one screen down: each of those reserves a screen, so that lands on the
 // content beneath it.
@@ -55,14 +55,13 @@ export default function ScrollHint({ enabled = true }) {
       ref={wrapperRef}
       className={`absolute inset-x-0 top-0 h-[100dvh] z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
-      {/* Same glass as the navbar pill: the opacity fade is on the ancestor
-          here rather than this element, so keep transform-gpu to hold it on its
-          own compositing layer and stop the backdrop-filter flattening. */}
+      {/* Just the mark, no chrome — the padding is only there to keep the tap
+          target honest now that nothing is drawn around it. */}
       <button
         type="button"
         onClick={scrollOn}
         aria-label="Scroll to the next section"
-        className={`flex items-center justify-center rounded-full p-2.5 text-gray-500 hover:text-gray-700 border border-black/15 bg-black/5 hover:bg-black/8 backdrop-blur-xl shadow-lg shadow-black/10 transform-gpu transition-colors duration-300 ${visible ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        className={`flex items-center justify-center p-2.5 text-gray-400 transition-colors duration-300 hover:text-gray-900 ${visible ? 'pointer-events-auto' : 'pointer-events-none'}`}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
