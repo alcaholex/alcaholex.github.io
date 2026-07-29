@@ -1,4 +1,5 @@
 import { Arimo, Montserrat } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import SmoothScroll from "../components/SmoothScroll";
@@ -17,6 +18,14 @@ const navFont = Montserrat({
   weight: ["400", "500", "600"],
 });
 
+// Loading-screen button only. display: "block" — the loader is the first
+// paint, so hold the text invisible briefly rather than flash a fallback.
+const fascinate = localFont({
+  src: "../../public/fonts/Fascinate Font/Fascinate-Regular.ttf",
+  variable: "--font-fascinate",
+  display: "block",
+});
+
 export const metadata = {
   title: "Alex Li's Portfolio",
   description: "welcome to my portfolio!",
@@ -33,7 +42,7 @@ export default function RootLayout({ children }) {
   return (
 
     // suppressHydrationWarning: the script below may add `dark` pre-hydration.
-    <html lang="en" className={`${fallback.variable} ${navFont.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${fallback.variable} ${navFont.variable} ${fascinate.variable}`} suppressHydrationWarning>
       <body className="antialiased">
         {/* Saved theme restored BEFORE first paint, so no light flash. */}
         <script

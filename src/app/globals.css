@@ -74,6 +74,12 @@ html.is-loading .glass-cursor-dot {
   opacity: 0 !important;
 }
 
+/* Nothing scrolls behind the gate: the loader owns the viewport until the
+   visitor clicks through. */
+html.is-loading {
+  overflow: hidden;
+}
+
 /* Lenis smooth scroll owns the scroll animation. */
 html.lenis,
 html.lenis body {

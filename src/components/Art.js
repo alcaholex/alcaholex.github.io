@@ -9,69 +9,69 @@ import { useLenis } from './SmoothScroll'
 
 const artworks = [
   {
-    title: "Agamemnon's Helmet",
+    title: "agamemnon's helmet",
     image: '/art/agamemnon.png',
-    alt: "Agamemnon's Helmet",
+    alt: "agamemnon's helmet",
     description: (
-      <>Renders of ancient Greek king Agamemnon&apos;s helmet. A love letter to Christopher Nolan&apos;s <i>Odyssey</i>.</>
+      <>renders of ancient greek king agamemnon&apos;s helmet. a love letter to christopher nolan&apos;s <i>odyssey</i>.</>
     ),
     href: 'https://www.instagram.com/p/DbH1_5Qlq1d/',
   },
   {
-    title: 'Space Megastructure',
+    title: 'space megastructure',
     image: '/art/megastructure.png',
-    alt: 'Space Megastructure',
-    description: 'An arbitrarily large space structure',
+    alt: 'space megastructure',
+    description: 'an arbitrarily large space structure',
     href: 'https://www.instagram.com/p/Da39u8YoKcb/',
   },
   {
-    title: 'Robot Renders',
+    title: 'robot renders',
     image: '/art/2053x.png',
-    alt: 'Robot Renders',
-    description: 'A collection of VEX robot renders. Includes a climbing animation',
+    alt: 'robot renders',
+    description: 'a collection of vex robot renders. includes a climbing animation',
     href: 'https://www.instagram.com/p/DYdmqFslvsi/',
   },
   {
-    title: 'Water Shader',
+    title: 'water shader',
     image: '/art/ships.png',
-    alt: 'Water Shader',
-    description: 'A semi-stylized demonstration of a water shader, rendered alongside ships',
+    alt: 'water shader',
+    description: 'a semi-stylized demonstration of a water shader, rendered alongside ships',
     href: 'https://www.instagram.com/p/DQ3AFVfDYtu/',
     imageClassName: 'object-[center_100%]',
   },
   {
-    title: 'LEGO Water',
+    title: 'lego water',
     image: '/art/legowater.png',
-    alt: 'LEGO Water',
-    description: 'A fun LEGO-like fluid simulation',
+    alt: 'lego water',
+    description: 'a fun lego-like fluid simulation',
     href: 'https://www.instagram.com/p/DNmvmOXAffC/',
   },
   {
-    title: 'Portal',
+    title: 'portal',
     image: '/art/portal.png',
-    alt: 'Portal',
-    description: 'A VFX shot of a portal in a dark environment, inspired by Doctor Strange',
+    alt: 'portal',
+    description: 'a vfx shot of a portal in a dark environment, inspired by doctor strange',
     href: 'https://www.instagram.com/p/DLfQNJfAJ7Q/',
   },
   {
-    title: 'Cyberpunk City',
+    title: 'cyberpunk city',
     image: '/art/cyberpunk.png',
-    alt: 'Cyberpunk City',
-    description: 'A gloomy cyberpunk-inspired scene densely packed with dark alleys and neon lights',
+    alt: 'cyberpunk city',
+    description: 'a gloomy cyberpunk-inspired scene densely packed with dark alleys and neon lights',
     href: 'https://www.instagram.com/p/DJqQghhgFq3/',
   },
   {
-    title: 'Planets',
+    title: 'planets',
     image: '/art/earth_render.png',
-    alt: 'Planets',
-    description: 'A series of planet renders from our very own solar system',
+    alt: 'planets',
+    description: 'a series of planet renders from our very own solar system',
     href: 'https://www.instagram.com/p/C5kCDTDA8-W/',
   },
   {
-    title: 'Mountainous Landscape',
+    title: 'mountainous landscape',
     image: '/art/mountains.png',
-    alt: 'Mountainous Landscape',
-    description: 'A snowy, semi-realistic mountainous landscape created in Gaea and Blender',
+    alt: 'mountainous landscape',
+    description: 'a snowy, semi-realistic mountainous landscape created in gaea and blender',
     href: 'https://www.instagram.com/p/C2782vvA2rb/',
   },
 ]
@@ -306,10 +306,10 @@ export default function Art() {
 
       <div className="mx-auto w-full max-w-[560px] px-6">
         <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-          blender files always open with a &quot;default cube&quot;.
+          blender files always open with a &quot;default cube&quot;. so it&apos;s not wrong to say that i&apos;ve made mountains out of a cube.
         </p>
         <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-          reminder that everything below derives from that cube:
+          i&apos;m not totally sure how to express this in words, but thinking about the cube and the creative process is getting existential...
         </p>
       </div>
 

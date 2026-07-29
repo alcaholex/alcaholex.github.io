@@ -28,10 +28,10 @@ export default function Home() {
 
           <div className="mx-auto w-full max-w-[500px] px-6 pt-16 pb-16">
             <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-              i&apos;m a high school student with a passion for design, technology, and engineering. i take pride in my ability to self-learn. it&apos;s what brought me here!
+              i&apos;m a high school student with a passion for design, technology, and engineering. like everything else i create, i had a lot of fun building this portfolio, so i hope you enjoy exploring it!
             </p>
             <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-              if you want to learn more about my journey, check out the &quot;timeline&quot; below.
+              if you want to learn more about my journey, i built a &quot;timeline&quot; into a metro map...
             </p>
 
             <div className="relative z-40">

@@ -956,6 +956,33 @@ export default function FlowTimeline() {
     }),
   }
 
+  // Terminal arrows: same bubbly paper/ink style as the station discs,
+  // sitting just past the free end of the line and pointing outward. They
+  // live inside the station div, so they ride along with drags.
+  const ARROWS = new Map()
+  ;['prog', 'blender'].forEach((id) => {
+    const line = STATION_LINES.get(id).find(
+      (l) => l.stations[0] === id || l.stations[l.stations.length - 1] === id
+    )
+    if (!line) return
+    const first = line.stations[0] === id
+    const nbId = first ? line.stations[1] : line.stations[line.stations.length - 2]
+    const a = REST.get(id)
+    const b = REST.get(nbId)
+    if (!a || !b) return
+    // The track leaves the terminus toward its dogleg elbow when there is
+    // one, so aim along the real first piece, flipped to point outward.
+    const pieces = first ? segPieces(a, b) : segPieces(b, a)
+    const toward = first
+      ? pieces.length === 2
+        ? pieces[0][1]
+        : b
+      : pieces.length === 2
+        ? pieces[1][0]
+        : b
+    ARROWS.set(id, (Math.atan2(a.y - toward.y, a.x - toward.x) * 180) / Math.PI)
+  })
+
   const servedLines = active ? STATION_LINES.get(active.id) : []
   const steps = active ? stepsFrom(active.id) : { back: [], next: [] }
 
@@ -1015,6 +1042,9 @@ export default function FlowTimeline() {
         {NODES.filter((n) => REST.has(n.id)).map((node) => {
           const meta = STATION_META.get(node.id)
           const rest = REST.get(node.id)
+          const arrowDeg = ARROWS.get(node.id)
+          const arrowRad = arrowDeg === undefined ? 0 : (arrowDeg * Math.PI) / 180
+          const arrowDist = meta.size / 2 + 11
           return (
             <div
               key={node.id}
@@ -1061,6 +1091,34 @@ export default function FlowTimeline() {
               >
                 <circle cx="12" cy="12" r="8.5" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3.4" />
               </svg>
+
+              {arrowDeg !== undefined && (
+                <svg
+                  aria-hidden="true"
+                  width={meta.size}
+                  height={meta.size}
+                  viewBox="0 0 24 24"
+                  className="pointer-events-none absolute"
+                  style={{
+                    // Same size as the disc svg, so centering cancels out:
+                    // offsetting the top-left by the polar offset centers it.
+                    // Position sits outward past the free end; +180 turns the
+                    // head back to point into the line.
+                    left: Math.cos(arrowRad) * arrowDist,
+                    top: Math.sin(arrowRad) * arrowDist,
+                    transform: `rotate(${arrowDeg + 180}deg)`,
+                    transformOrigin: '50% 50%',
+                  }}
+                >
+                  <path
+                    d="M7.5 4.5 L18 12 L7.5 19.5 Z"
+                    fill="var(--paper)"
+                    stroke="var(--ink)"
+                    strokeWidth="3.4"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
 
               <span
                 className={`absolute whitespace-nowrap rounded-sm bg-gray-50/85 px-0.5 text-[7px] font-medium leading-tight text-gray-600 transition-opacity duration-300 dark:bg-gray-950/85 dark:text-gray-300 sm:px-1 sm:text-[9px] ${labelsOn ? 'opacity-100' : 'pointer-events-none opacity-0'}`}

@@ -43,7 +43,7 @@ const projects = [
     year: '2025',
     platform: 'sim',
     status: 'terminated',
-    // image: '/projects/3004a.png',
+    image: '/projects/sim.png',
     alt: 'robotics simulator',
     description: 'a simulator for vex robots with an emphasis on realistic physics and accurate motor control.',
     note: 'unity - blender - autodesk fusion',
@@ -183,16 +183,16 @@ export default function Projects() {
                 >
                   <div className="overflow-hidden">
                     <div className={`pb-6 ${PANEL_INSET}`}>
-                      {/* Fixed 16:10 crop so every panel opens to the same
-                          shape whatever the source dimensions; skipped
-                          entirely when a project has no image (an <img>
-                          without src renders a broken-image icon). */}
+                      {/* Whole image, natural ratio — panel heights vary a
+                          little rather than any picture losing edges. Skipped
+                          when a project has no image (an <img> without src
+                          renders a broken-image icon). */}
                       {project.image && (
                         <img
                           src={project.image}
                           alt={project.alt}
                           loading="lazy"
-                          className="aspect-[16/10] w-full rounded-lg border border-black/10 object-cover dark:border-white/10"
+                          className="w-full rounded-lg border border-black/10 dark:border-white/10"
                         />
                       )}
                       <p className="mt-3 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
