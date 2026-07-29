@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import * as sfx from './sound'
 
 const ASSETS = ['name', 'projects', 'art']
 
@@ -55,11 +56,13 @@ export default function LoadingGate({ children }) {
     return () => clearTimeout(handle)
   }, [])
 
-  useEffect(() => {
-    if (!isDone) return
-    const handle = setTimeout(() => setArrived(true), FINISH_MS)
-    return () => clearTimeout(handle)
-  }, [isDone])
+  // The gate no longer opens itself: loading fills the bar, and the visitor
+  // walks through it. That click is also the site's first guaranteed user
+  // gesture, so it unlocks audio for everything downstream.
+  const proceed = () => {
+    sfx.unlock()
+    setArrived(true)
+  }
 
   useEffect(() => {
     const root = document.documentElement
@@ -82,7 +85,7 @@ export default function LoadingGate({ children }) {
             arrived ? '-translate-y-full pointer-events-none' : 'translate-y-0'
           }`}
         >
-          <div role="status" aria-live="polite">
+          <div role="status" aria-live="polite" className="flex flex-col items-center">
             <span className="sr-only">{isDone ? 'Loaded' : 'Loading'}</span>
 
             <div
@@ -99,6 +102,21 @@ export default function LoadingGate({ children }) {
                 }}
               />
             </div>
+
+            {/* Always mounted so nothing shifts; it only becomes real once
+                the bar has finished filling. disabled (not just faded) so it
+                cannot be clicked or tabbed to early. */}
+            <button
+              type="button"
+              onClick={proceed}
+              disabled={!isDone}
+              className={`mt-8 rounded-full border border-black/15 px-6 py-2 text-[11px] uppercase tracking-[0.08em] text-gray-500 transition-all duration-500 hover:border-black/30 hover:text-gray-900 dark:border-white/15 dark:text-gray-400 dark:hover:border-white/30 dark:hover:text-gray-100 ${
+                isDone ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+              style={{ transitionDelay: isDone ? `${FINISH_MS}ms` : '0ms' }}
+            >
+              continue
+            </button>
           </div>
         </div>
       )}

@@ -103,7 +103,7 @@ export default function GlassCursor() {
     <div
       ref={dotRef}
       aria-hidden="true"
-      className="glass-cursor-dot pointer-events-none fixed left-0 top-0 z-[200] rounded-full border border-gray-500/50 bg-white/0 shadow-lg shadow-black/10 backdrop-blur-sm opacity-0 will-change-transform"
+      className="glass-cursor-dot pointer-events-none fixed left-0 top-0 z-[200] rounded-full border border-gray-500/50 bg-white/0 shadow-lg shadow-black/10 backdrop-blur-sm opacity-0 will-change-transform dark:border-gray-200/70 dark:bg-white/10 dark:shadow-black/40"
       style={{ width: SIZE, height: SIZE }}
     />
   )

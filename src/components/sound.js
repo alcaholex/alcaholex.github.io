@@ -103,6 +103,47 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', firstGesture, true)
 }
 
+// A feather-light tick on entering anything clickable, wired once by
+// delegation instead of per component. Mouse only: on touch, pointerover
+// fires as part of the tap and would double up with the tap's own sound.
+// Silent until some gesture has unlocked audio — a hover is not one.
+// Elements opting into the heavier tick carry data-sfx-hover="heavy".
+const HOVER_SELECTOR = 'a, button, [role="button"]'
+let hoverEl = null
+let hoverAt = 0
+function hoverTick(heavy) {
+  if (!ctx || ctx.state !== 'running' || !master) return
+  const now = performance.now()
+  if (now - hoverAt < 40) return
+  hoverAt = now
+  const t = ctx.currentTime
+  const o = ctx.createOscillator()
+  o.type = 'sine'
+  o.frequency.value = (heavy ? 440 : 880) * (1 + (Math.random() - 0.5) * 0.04)
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.linearRampToValueAtTime(heavy ? 0.05 : 0.018, t + 0.003)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (heavy ? 0.08 : 0.045))
+  o.connect(g)
+  g.connect(master)
+  o.start(t)
+  o.stop(t + 0.11)
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'pointerover',
+    (e) => {
+      if (e.pointerType && e.pointerType !== 'mouse') return
+      const el = e.target instanceof Element ? e.target.closest(HOVER_SELECTOR) : null
+      if (el && el !== hoverEl) hoverTick(el.matches('[data-sfx-hover="heavy"]'))
+      hoverEl = el
+    },
+    true
+  )
+}
+
+// A departure-board row opening (higher dot) or closing (the root) — the
+// map's own mallet, one octave apart so the toggle reads as a direction.
 let reverbV = null
 function reverbIn() {
   if (!reverbV) {
@@ -251,37 +292,32 @@ export function stretchTo(amount) {
   o.stop(t + 0.16)
 }
 
-const NAV_CHORDS = [
-  [1, 1.25, 1.5],
-  [4 / 3, 5 / 3, 2],
-  [1.5, 1.875, 2.25],
-  [2, 2.5, 3],
-]
-export function navTo(stop, emphatic = false) {
-  if (emphatic) {
+// The shared hum voice: a chord of pure sines that swells, holds a beat and
+// releases into the room. Every chorded interaction on the site speaks
+// through this; ratios are just intonation on the pluck root (A3).
+function hum(ratios, { gain = 1, hold = 0.08, gesture = true } = {}) {
+  if (gesture) {
     if (!ensure(true)) return
   } else if (!ctx || ctx.state !== 'running' || !master) {
     return
   }
   const t = ctx.currentTime
-  const chord = NAV_CHORDS[Math.max(0, Math.min(NAV_CHORDS.length - 1, stop))]
   const jitter = 1 + (Math.random() - 0.5) * 0.008
   const send = ctx.createGain()
   send.gain.value = 0.35
   send.connect(reverbIn())
-
-  const peaks = emphatic ? [0.09, 0.055, 0.045] : [0.055, 0.034, 0.028]
+  const basePeaks = [0.09, 0.055, 0.045, 0.038]
   const swell = 0.08
-  const hold = emphatic ? 0.1 : 0.06
   const release = 0.25
-  chord.forEach((ratio, i) => {
+  ratios.forEach((ratio, i) => {
+    const peak = basePeaks[Math.min(i, basePeaks.length - 1)] * gain
     const o = ctx.createOscillator()
     o.type = 'sine'
     o.frequency.value = PLUCK_ROOT * ratio * jitter
     const g = ctx.createGain()
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.linearRampToValueAtTime(peaks[i], t + swell)
-    g.gain.setValueAtTime(peaks[i], t + swell + hold)
+    g.gain.linearRampToValueAtTime(peak, t + swell)
+    g.gain.setValueAtTime(peak, t + swell + hold)
     g.gain.setTargetAtTime(0, t + swell + hold, release / 4)
     o.connect(g)
     g.connect(master)
@@ -289,6 +325,65 @@ export function navTo(stop, emphatic = false) {
     o.start(t)
     o.stop(t + swell + hold + release + 0.2)
   })
+}
+
+// The navbar's cadence: I - IV - V - I(octave), so riding the site down
+// plays a resolution one stop at a time.
+const NAV_CHORDS = [
+  [1, 1.25, 1.5],
+  [4 / 3, 5 / 3, 2],
+  [1.5, 1.875, 2.25],
+  [2, 2.5, 3],
+]
+export function navTo(stop, emphatic = false) {
+  hum(NAV_CHORDS[Math.max(0, Math.min(NAV_CHORDS.length - 1, stop))], {
+    gain: emphatic ? 1 : 0.6,
+    hold: emphatic ? 0.1 : 0.06,
+    gesture: emphatic,
+  })
+}
+
+// The site's other chorded moments. OPENERS are drawn at random from a pool
+// per press — every entry is diatonic in A and leans away from the root, so
+// whichever one plays, the FIXED low closers below still resolve it. The
+// closers stay constant on purpose: variety belongs to setting out, and
+// coming home should always sound like home.
+const OPEN_POOL = [
+  [1, 5 / 4, 3 / 2], // I
+  [4 / 3, 5 / 3, 2], // IV
+  [3 / 2, 15 / 8, 9 / 4], // V
+  [9 / 8, 4 / 3, 5 / 3], // ii
+  [5 / 3, 2, 5 / 2], // vi
+  [1, 4 / 3, 3 / 2], // sus4
+  [1, 3 / 2, 9 / 4], // sus2 sparkle
+  [2, 5 / 2, 3], // I, octave up
+]
+// Going dark draws from low, moodier voicings instead.
+const DARK_POOL = [
+  [5 / 6, 1, 5 / 4], // F#m low
+  [2 / 3, 5 / 6, 1], // D low
+  [3 / 4, 1, 5 / 4], // A low, first inversion
+]
+const POOLS = {
+  link: OPEN_POOL,
+  labelsOn: OPEN_POOL,
+  artOpen: OPEN_POOL,
+  artLink: OPEN_POOL,
+  boardOpen: OPEN_POOL,
+  descend: OPEN_POOL,
+  themeLight: OPEN_POOL,
+  themeDark: DARK_POOL,
+}
+const CHORDS = {
+  labelsOff: [3 / 4, 1, 5 / 4], // low resolve
+  unmute: [1, 5 / 4, 3 / 2, 2], // full four-voice A — sound is back
+  boardClose: [3 / 4, 1, 5 / 4], // back to the root — closed
+  dismiss: [3 / 4, 1, 3 / 2], // low open fifth — a modal settling shut
+}
+export function chord(name, gain = 1) {
+  const pool = POOLS[name]
+  const c = pool ? pool[Math.floor(Math.random() * pool.length)] : CHORDS[name]
+  if (c) hum(c, { gain })
 }
 
 export function swipe(stop) {

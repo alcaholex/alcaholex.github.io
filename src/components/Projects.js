@@ -2,42 +2,91 @@
 
 import { useState } from 'react'
 import ProjectsTitle from './ProjectsTitle'
+import * as sfx from './sound'
 
 const projects = [
   {
-    title: '3d portfolio website',
+    title: '\"blades\"',
     year: '2026',
+    platform: 'art',
+    status: 'under construction',
+    image: '/projects/mantis.png',
+    alt: 'robot renders',
+    description: 'a mechanical linkage mounted to a person\'s forearm, designed to extend and retract a blade. inspired by cyberpunk 2077.',
+    note: 'still working on this one!',
+  },
+  {
+    title: 'robot renders',
+    year: '2026',
+    platform: 'art',
+    status: 'in service',
+    image: '/projects/2053x.png',
+    alt: 'robot renders',
+    description: 'a collection of vex robot renders. includes a climbing animation.',
+    note: 'blender - autodesk fusion',
+    links: [
+      { label: 'instagram', href: 'https://www.instagram.com/p/DYdmqFslvsi/' },
+    ],
+  },
+  {
+    title: '3d portfolio website',
+    year: '2025',
     platform: 'web',
     status: 'under construction',
     image: '/projects/portfolio-site.png',
     alt: '3d portfolio website',
     description: 'portfolio built with next.js and tailwind css, featuring interactive 3d models built with three.js.',
-    note: 'this is the website',
+    note: 'next.js - tailwind css - three.js',
   },
   {
-    title: 'malfunction',
-    year: '2021',
-    platform: 'steam',
+    title: 'robotics simulator',
+    year: '2025',
+    platform: 'sim',
+    status: 'terminated',
+    // image: '/projects/3004a.png',
+    alt: 'robotics simulator',
+    description: 'a simulator for vex robots with an emphasis on realistic physics and accurate motor control.',
+    note: 'unity - blender - autodesk fusion',
+  },
+  {
+    title: 'team qwerty 3004a',
+    year: '2024',
+    platform: 'vex',
     status: 'in service',
-    image: '/projects/malfunction.png',
-    alt: 'malfunction',
-    description: 'first-person shooter game developed in unity when i was learning and experimenting with game development.',
+    image: '/projects/3004a.png',
+    alt: 'team qwerty 3004a',
+    description: 'the robotics team i founded and lead, competing in the vex robotics competition.',
     links: [
-      { label: 'live demo', href: 'https://store.steampowered.com/app/1899790/MALFUNCTION_FPS/' },
-      { label: 'github', href: 'https://github.com/alcaholex/MALFUNCTION-FPS' },
+      { label: 'events.vex.com', href: 'https://events.vex.com/teams/V5RC/3004A' },
+      { label: 'instagram', href: 'https://www.instagram.com/vrc_3004a' },
     ],
   },
   {
     title: 'interactive cell model',
-    year: '2021',
-    platform: 'itch.io',
+    year: '2022',
+    platform: 'game',
     status: 'in service',
     image: '/projects/cell.png',
     alt: 'interactive cell model',
     description: 'interactive visualization of the animal cell and its organelles; created for an elementary school project.',
+    note: 'unity - blender',
     links: [
       { label: 'live demo', href: 'https://hoiman6321.itch.io/cell-biology' },
       { label: 'github', href: 'https://github.com/alcaholex/cell-biology' },
+    ],
+  },
+  {
+    title: 'malfunction',
+    year: '2021',
+    platform: 'game',
+    status: 'in service',
+    image: '/projects/malfunction.png',
+    alt: 'malfunction',
+    description: 'first-person shooter game created during my beginner days of game development.',
+    note: 'unity - blender',
+    links: [
+      { label: 'live demo', href: 'https://store.steampowered.com/app/1899790/MALFUNCTION_FPS/' },
+      { label: 'github', href: 'https://github.com/alcaholex/MALFUNCTION-FPS' },
     ],
   },
 ]
@@ -92,9 +141,13 @@ export default function Projects() {
               <div key={project.title} className="border-t border-gray-200 last:border-b dark:border-gray-800">
                 <button
                   type="button"
-                  onClick={() => setOpen(isOpen ? null : project.title)}
+                  onClick={() => {
+                    sfx.chord(isOpen ? 'boardClose' : 'boardOpen')
+                    setOpen(isOpen ? null : project.title)
+                  }}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
+                  data-sfx-hover="heavy"
                   className={`group w-full ${COLS} items-baseline py-3 text-left`}
                 >
                   <span className={`${CELL_TIME} text-[11px] leading-5 tabular-nums text-gray-400 dark:text-gray-500`}>
@@ -130,12 +183,18 @@ export default function Projects() {
                 >
                   <div className="overflow-hidden">
                     <div className={`pb-6 ${PANEL_INSET}`}>
-                      <img
-                        src={project.image}
-                        alt={project.alt}
-                        loading="lazy"
-                        className="w-full rounded-lg border border-black/10 object-cover dark:border-white/10"
-                      />
+                      {/* Fixed 16:10 crop so every panel opens to the same
+                          shape whatever the source dimensions; skipped
+                          entirely when a project has no image (an <img>
+                          without src renders a broken-image icon). */}
+                      {project.image && (
+                        <img
+                          src={project.image}
+                          alt={project.alt}
+                          loading="lazy"
+                          className="aspect-[16/10] w-full rounded-lg border border-black/10 object-cover dark:border-white/10"
+                        />
+                      )}
                       <p className="mt-3 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                         {project.description}
                       </p>

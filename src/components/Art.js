@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import ArtTitle from './ArtTitle'
 import { InstagramIcon } from './Icons'
+import * as sfx from './sound'
 import { useLenis } from './SmoothScroll'
 
 const artworks = [
@@ -91,7 +92,9 @@ function Lightbox({ art, onClose }) {
 
   const view = useRef({ scale: 1, x: 0, y: 0 })
 
+  // Every close path — X, backdrop, Escape — converges here.
   const dismiss = useCallback(() => {
+    sfx.chord('dismiss')
     setShown(false)
     setTimeout(onClose, SLIDE_MS)
   }, [onClose])
@@ -279,6 +282,7 @@ function Lightbox({ art, onClose }) {
             href={art.href}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => sfx.chord('artLink')}
             className={`absolute top-4 right-4 bg-black/30 backdrop-blur-sm rounded-full p-2 hover:bg-black/40 transition-all duration-200 ${zoomed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           >
             <InstagramIcon className="w-5 h-5 text-white" />
@@ -331,12 +335,15 @@ export default function Art() {
 
                     <button
                       type="button"
-                      onClick={() => setOpenArt(art)}
+                      onClick={() => {
+                        sfx.chord('artOpen')
+                        setOpenArt(art)
+                      }}
                       aria-label={`View ${art.title} full size`}
                       className="absolute inset-0 z-10 cursor-pointer"
                     />
 
-                    <a href={art.href} target="_blank" rel="noopener noreferrer" className="absolute top-4 right-4 z-20 bg-black/30 backdrop-blur-sm rounded-full p-2 hover:bg-black/40 transition-all duration-200">
+                    <a href={art.href} target="_blank" rel="noopener noreferrer" onClick={() => sfx.chord('artLink')} className="absolute top-4 right-4 z-20 bg-black/30 backdrop-blur-sm rounded-full p-2 hover:bg-black/40 transition-all duration-200">
                       <InstagramIcon className="w-5 h-5 text-white" />
                     </a>
                   </div>

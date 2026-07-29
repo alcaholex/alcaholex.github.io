@@ -698,7 +698,9 @@ export default function FlowTimeline() {
     setActive(node)
   }
 
+  // Every close path — X, backdrop, Escape — converges here.
   const dismiss = () => {
+    sfx.chord('dismiss')
     setShown(false)
     closeTimer.current = setTimeout(() => setActive(null), FADE_MS)
   }
@@ -971,7 +973,12 @@ export default function FlowTimeline() {
           type="button"
           role="switch"
           aria-checked={labelsOn}
-          onClick={() => setLabelsOn((v) => !v)}
+          onClick={() =>
+            setLabelsOn((v) => {
+              sfx.chord(v ? 'labelsOff' : 'labelsOn')
+              return !v
+            })
+          }
           className="flex items-center gap-2 text-[11px] text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
         >
           labels

@@ -34,11 +34,14 @@ export default function Navbar() {
   const toggleMute = () => {
     setMuted((m) => {
       sfx.setMuted(!m)
+      // Unmuting announces itself; muting is, correctly, silent.
+      if (m) sfx.chord('unmute')
       return !m
     })
   }
   const toggleTheme = () => {
     setDark((d) => {
+      sfx.chord(d ? 'themeLight' : 'themeDark')
       const root = document.documentElement
 
       root.classList.add('theme-fading')

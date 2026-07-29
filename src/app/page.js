@@ -6,6 +6,7 @@ import Art from '../components/Art'
 import SlideInSection from '../components/SlideInSection'
 import LoadingGate from '../components/LoadingGate'
 import FlowTimeline from '../components/FlowTimeline'
+import * as sfx from '../components/sound'
 
 const SOCIALS = [
   { label: 'github', handle: 'alcaholex', href: 'https://github.com/alcaholex' },
@@ -46,6 +47,7 @@ export default function Home() {
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => sfx.chord('link')}
                     className="text-sm text-gray-500 underline underline-offset-4 decoration-gray-300 transition-colors hover:text-gray-800 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-gray-200"
                   >
                     {social.label}
