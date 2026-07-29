@@ -10,7 +10,7 @@ import { useLenis } from './SmoothScroll'
 const artworks = [
   {
     title: "agamemnon's helmet",
-    image: '/art/agamemnon.png',
+    image: '/art/agamemnon.webp',
     alt: "agamemnon's helmet",
     description: (
       <>renders of ancient greek king agamemnon&apos;s helmet. a love letter to christopher nolan&apos;s <i>odyssey</i>.</>
@@ -19,21 +19,21 @@ const artworks = [
   },
   {
     title: 'space megastructure',
-    image: '/art/megastructure.png',
+    image: '/art/megastructure.webp',
     alt: 'space megastructure',
     description: 'an arbitrarily large space structure',
     href: 'https://www.instagram.com/p/Da39u8YoKcb/',
   },
   {
     title: 'robot renders',
-    image: '/art/2053x.png',
+    image: '/art/2053x.webp',
     alt: 'robot renders',
     description: 'a collection of vex robot renders. includes a climbing animation',
     href: 'https://www.instagram.com/p/DYdmqFslvsi/',
   },
   {
     title: 'water shader',
-    image: '/art/ships.png',
+    image: '/art/ships.webp',
     alt: 'water shader',
     description: 'a semi-stylized demonstration of a water shader, rendered alongside ships',
     href: 'https://www.instagram.com/p/DQ3AFVfDYtu/',
@@ -41,35 +41,35 @@ const artworks = [
   },
   {
     title: 'lego water',
-    image: '/art/legowater.png',
+    image: '/art/legowater.webp',
     alt: 'lego water',
     description: 'a fun lego-like fluid simulation',
     href: 'https://www.instagram.com/p/DNmvmOXAffC/',
   },
   {
     title: 'portal',
-    image: '/art/portal.png',
+    image: '/art/portal.webp',
     alt: 'portal',
     description: 'a vfx shot of a portal in a dark environment, inspired by doctor strange',
     href: 'https://www.instagram.com/p/DLfQNJfAJ7Q/',
   },
   {
     title: 'cyberpunk city',
-    image: '/art/cyberpunk.png',
+    image: '/art/cyberpunk.webp',
     alt: 'cyberpunk city',
     description: 'a gloomy cyberpunk-inspired scene densely packed with dark alleys and neon lights',
     href: 'https://www.instagram.com/p/DJqQghhgFq3/',
   },
   {
     title: 'planets',
-    image: '/art/earth_render.png',
+    image: '/art/earth_render.webp',
     alt: 'planets',
     description: 'a series of planet renders from our very own solar system',
     href: 'https://www.instagram.com/p/C5kCDTDA8-W/',
   },
   {
     title: 'mountainous landscape',
-    image: '/art/mountains.png',
+    image: '/art/mountains.webp',
     alt: 'mountainous landscape',
     description: 'a snowy, semi-realistic mountainous landscape created in gaea and blender',
     href: 'https://www.instagram.com/p/C2782vvA2rb/',
@@ -325,6 +325,8 @@ export default function Art() {
                     <img
                       src={art.image}
                       alt={art.alt}
+                      loading="lazy"
+                      decoding="async"
                       className={`absolute inset-0 w-full h-full object-cover${art.imageClassName ? ` ${art.imageClassName}` : ''}`}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-transparent" />

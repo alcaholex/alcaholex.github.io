@@ -13,12 +13,14 @@ const TIMEOUT_MS = 15000
 // The creep is a single CSS transition, NOT a rAF loop: the main thread the
 // loop would tick on is the one loading has jammed, so JS-driven fills
 // stutter badly. Transforms animate on the compositor and stay smooth.
-// The bar always plays the full climb to 90%, then runs to 100% once
-// everything has reported.
+// The bar creeps toward 90% on the slow curve, but the moment everything has
+// reported (past a short floor so the gate never just flashes) it runs out
+// to 100% — a slow climb only ever means loading is genuinely slow.
 const CREEP_SCALE = 0.9
 const CREEP_MS = 8000
 const CREEP_EASE = 'cubic-bezier(0.1, 0.75, 0.25, 1)'
-const FINISH_MS = 400
+const MIN_SHOW_MS = 900
+const FINISH_MS = 600
 
 // Bar and button are one element: the filled bar shrinks in length and grows
 // in height until it IS the button, then the label fades in.
@@ -48,8 +50,8 @@ export default function LoadingGate({ children }) {
   const [timedOut, setTimedOut] = useState(false)
   // Flipped one frame after mount so the creep transition has a 0 to leave.
   const [creeping, setCreeping] = useState(false)
-  // The full 8s climb has played out.
-  const [creptDone, setCreptDone] = useState(false)
+  // The gate has been visible long enough to not just flash.
+  const [minShown, setMinShown] = useState(false)
 
   // 'loading' → creeping to 90; 'finishing' → running to 100; 'ready' →
   // morphed into the button, waiting; 'exit' → fade-out; 'gone' → unmounted.
@@ -67,18 +69,18 @@ export default function LoadingGate({ children }) {
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setCreeping(true))
-    const creepHandle = setTimeout(() => setCreptDone(true), CREEP_MS)
+    const minHandle = setTimeout(() => setMinShown(true), MIN_SHOW_MS)
     const outHandle = setTimeout(() => setTimedOut(true), TIMEOUT_MS)
     return () => {
       cancelAnimationFrame(raf)
-      clearTimeout(creepHandle)
+      clearTimeout(minHandle)
       clearTimeout(outHandle)
     }
   }, [])
 
   useEffect(() => {
-    if (phase === 'loading' && creptDone && isDone) setPhase('finishing')
-  }, [phase, creptDone, isDone])
+    if (phase === 'loading' && minShown && isDone) setPhase('finishing')
+  }, [phase, minShown, isDone])
 
   useEffect(() => {
     if (phase !== 'finishing') return
