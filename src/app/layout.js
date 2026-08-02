@@ -1,5 +1,6 @@
 import { Arimo, Montserrat } from "next/font/google";
 import localFont from "next/font/local";
+import { preload } from "react-dom";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import SmoothScroll from "../components/SmoothScroll";
@@ -39,6 +40,18 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // The LoadingGate can't lift until all three models arrive; preloaded from
+  // the HTML head they stop queueing behind the JS/image waterfall on slow
+  // connections. crossOrigin must match three's FileLoader request (cors mode,
+  // same-origin credentials) or the browser downloads every model twice.
+  for (const model of ["name", "projects", "art"]) {
+    preload(`/models/${model}.glb`, {
+      as: "fetch",
+      crossOrigin: "anonymous",
+      fetchPriority: "high",
+    });
+  }
+
   return (
 
     // suppressHydrationWarning: the script below may add `dark` pre-hydration.

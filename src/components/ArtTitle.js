@@ -1,13 +1,14 @@
 'use client'
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { useGLTF, Center, MeshTransmissionMaterial, Environment, OrbitControls } from '@react-three/drei'
+import { useGLTF, Center, OrbitControls } from '@react-three/drei'
+import GlassMaterial, { isSoftwareGL } from './GlassMaterial'
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
 import ScrollHint from './ScrollHint'
-import ThemedEnvLight from './ThemedEnvLight'
+import { GlassSceneLight } from './ThemedEnvLight'
 import * as sfx from './sound'
 
 function Model({ url }) {
@@ -24,16 +25,7 @@ function Model({ url }) {
           rotation={[Math.PI / 2, 0, 0]}
         >
 
-          <MeshTransmissionMaterial
-            backside={true}
-            distortion={0.2}
-            thickness={0.5}
-            roughness={0}
-            transmission={0.7}
-            ior={1.5}
-            chromaticAberration={0.05}
-            transparent={true}
-          />
+          <GlassMaterial />
         </mesh>
       ))}
     </Center>
@@ -209,15 +201,13 @@ export default function ArtTitle({ modelPath = "/models/art.glb" }) {
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
-          dpr={[1, 2]}
+          dpr={isSoftwareGL() ? 0.5 : [1, 2]}
 
           frameloop={isActive ? 'always' : 'never'}
           performance={{ min: 0.8 }}
         >
 
-          <Environment frames={Infinity}>
-            <ThemedEnvLight />
-          </Environment>
+          <GlassSceneLight />
 
           <AutoResetOrbitControls />
           <LensShift />
