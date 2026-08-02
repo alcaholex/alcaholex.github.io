@@ -898,6 +898,20 @@ export default function FlowTimeline() {
     const m = getMotion(id)
     if (!m.dragging) return
 
+    // A drag that crosses the viewport edge may never get a clean pointerup
+    // (edge gestures and window switches can swallow it), which would leave
+    // the station hanging at full stretch — release it the moment it exits
+    // and let the spring take it home.
+    if (
+      e.clientX < 0 ||
+      e.clientY < 0 ||
+      e.clientX > window.innerWidth ||
+      e.clientY > window.innerHeight
+    ) {
+      onPointerEnd(id)()
+      return
+    }
+
     m.moved = Math.max(
       m.moved,
       Math.hypot(e.clientX - m.startPointer.x, e.clientY - m.startPointer.y)
@@ -1056,6 +1070,7 @@ export default function FlowTimeline() {
               onPointerMove={onPointerMove(node.id)}
               onPointerUp={onPointerEnd(node.id)}
               onPointerCancel={onPointerEnd(node.id)}
+              onLostPointerCapture={onPointerEnd(node.id)}
 
               role="button"
               tabIndex={0}

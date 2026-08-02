@@ -2,7 +2,7 @@
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { useGLTF, Center, OrbitControls } from '@react-three/drei'
-import GlassMaterial, { isSoftwareGL } from './GlassMaterial'
+import GlassMaterial, { applyBakeUVs, isSoftwareGL, useDegraded, GlassPerfGuard } from './GlassMaterial'
 import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
@@ -23,17 +23,21 @@ function Model({ url, onLoad }) {
 
   return (
     <Center scale={viewport.width / 8.5}>
-      {scene.children.map((child, index) => (
-        <mesh
-          key={index}
-          geometry={child.geometry}
-          scale={[2, 2, 2]}
-          rotation={[Math.PI / 2, 0, 0]}
-        >
+      {/* UVs always projected (cheap, once) so a mid-session degrade can
+          swap to the baked texture without touching geometry again. */}
+      <group ref={(g) => g && applyBakeUVs(g)}>
+        {scene.children.map((child, index) => (
+          <mesh
+            key={index}
+            geometry={child.geometry}
+            scale={[2, 2, 2]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
 
-          <GlassMaterial />
-        </mesh>
-      ))}
+            <GlassMaterial model="name" />
+          </mesh>
+        ))}
+      </group>
     </Center>
   )
 }
@@ -201,6 +205,7 @@ function DragHint() {
 
 export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   const markReady = useAssetReady('name')
+  const degradedGlass = useDegraded()
 
   const [isLoaded, setIsLoaded] = useState(false)
   const [showHint, setShowHint] = useState(!hasDraggedBefore)
@@ -261,13 +266,14 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
         <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
-          dpr={isSoftwareGL() ? 0.5 : [1, 2]}
+          dpr={isSoftwareGL() ? 0.5 : degradedGlass ? 1 : [1, 2]}
 
           frameloop={isActive ? 'always' : 'never'}
           performance={{ min: 0.8 }}
         >
 
           <GlassSceneLight />
+          <GlassPerfGuard />
 
           <AutoResetOrbitControls />
           <LensShift />

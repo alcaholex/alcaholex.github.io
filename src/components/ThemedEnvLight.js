@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Color } from 'three'
 import { Environment } from '@react-three/drei'
-import { isSoftwareGL } from './GlassMaterial'
+import { useDegraded } from './GlassMaterial'
 
 // The glass titles' shared light: the env sphere, white in light mode and
 // slate in dark, lerped so it rides the theme cross-fade. The parent
@@ -15,19 +15,14 @@ const LIGHT = new Color('#ffffff')
 const DARK = new Color('#3e4452')
 
 // frames={Infinity} re-bakes the env cubemap + PMREM every frame — a fixed
-// per-frame cost no real GPU notices, but the dominant one under software
-// WebGL (it doesn't shrink with canvas dpr). Software renderers get two plain
-// lights instead; they lose the themed sheen, which the fallback flat glass
-// can't show anyway.
+// per-frame cost decent GPUs never notice, but dominant on weak or software
+// renderers (it doesn't shrink with canvas dpr). Degraded scenes render
+// nothing here at all: their matcap fallback carries its shading in the
+// texture, so lights and env would be pure waste.
 export function GlassSceneLight() {
-  if (isSoftwareGL()) {
-    return (
-      <>
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[5, 8, 10]} intensity={1.2} />
-      </>
-    )
-  }
+  const degraded = useDegraded()
+
+  if (degraded) return null
   return (
     <Environment frames={Infinity}>
       <ThemedEnvLight />

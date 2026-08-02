@@ -28,6 +28,12 @@ const downKbps = Number(opt('down', 0))
 const upKbps = Number(opt('up', 0))
 const port = Number(opt('port', 4173))
 const headed = args.includes('--headed')
+// Inspect mode: open the throttled browser for a human to explore — no
+// measurements, no auto-click; the script exits when the window is closed.
+const inspect = args.includes('--inspect')
+// Pre-arm the site's sticky degrade flag: shows/measures the weak-real-GPU
+// fallback tier on hardware that wouldn't trigger it naturally.
+const forceDegraded = args.includes('--force-degraded')
 // No CDP API throttles the GPU; forcing ANGLE onto SwiftShader (software
 // rasterization) is the worst-case-GPU stand-in.
 const softwareGpu = args.includes('--software-gpu')
@@ -94,11 +100,18 @@ log(`browser: ${executablePath}${headed ? ' (headed)' : ''}`)
 
 const browser = await puppeteer.launch({
   executablePath,
-  headless: !headed,
+  headless: !(headed || inspect),
   args: [
     '--window-size=1400,940',
     '--disable-extensions',
-    ...(softwareGpu ? ['--use-angle=swiftshader'] : []),
+    // A visible window can't present through ANGLE-on-SwiftShader (the display
+    // compositor goes black); the --disable-gpu path keeps it working, while
+    // headless sticks with the ANGLE forcing the measured profiles validated.
+    ...(softwareGpu
+      ? headed || inspect
+        ? ['--disable-gpu', '--enable-unsafe-swiftshader']
+        : ['--use-angle=swiftshader']
+      : []),
   ],
 })
 
@@ -115,8 +128,23 @@ try {
     })
   }
 
+  if (forceDegraded) {
+    await page.evaluateOnNewDocument(() => {
+      try {
+        sessionStorage.setItem('glass-degraded', '1')
+      } catch {}
+    })
+  }
+
   const t0 = Date.now()
   await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded', timeout: 120000 })
+
+  if (inspect) {
+    log('inspect mode: browse freely — close the browser window to finish')
+    await new Promise((r) => browser.on('disconnected', r))
+    server.close()
+    process.exit(0)
+  }
 
   // The gate arms by removing `disabled` from the CONTINUE button.
   log('waiting for LoadingGate to arm...')
@@ -186,6 +214,16 @@ try {
   const scrollFPS = await measureFPS(FPS_WINDOW_MS)
   await wheeling
 
+  // Set by the site's adaptive quality guard when sustained low FPS made it
+  // swap to fallback visuals mid-run.
+  const adaptiveDegraded = await page.evaluate(() => {
+    try {
+      return sessionStorage.getItem('glass-degraded') === '1'
+    } catch {
+      return null
+    }
+  })
+
   console.log(JSON.stringify({
     label,
     settings: { cpu, latencyMs, downKbps, upKbps, headed, softwareGpu },
@@ -194,6 +232,7 @@ try {
     gateTimedOut: gateReadyMs >= GATE_TIMEOUT_MS,
     heroFPS,
     scrollFPS,
+    adaptiveDegraded,
   }, null, 2))
 } finally {
   await browser.close()

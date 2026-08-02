@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- Bake rig for scripts/bake-surface.mjs: renders each title GLB wearing the
+     full glass recipe (three's physical transmission — drei's material minus
+     distortion) in the themed env, over the page background, viewed from the
+     site camera's direction — then captures the frame. The runtime fallback
+     re-projects these images onto the geometry with the SAME orthographic
+     basis (see applyBakeUVs in GlassMaterial.js): the two must stay in
+     lockstep or the mapping shears. -->
+<canvas id="c"></canvas>
+<script type="importmap">
+  { "imports": { "three": "/node_modules/three/build/three.module.js" } }
+</script>
+<script type="module">
+  import * as THREE from 'three'
+  import { GLTFLoader } from '/node_modules/three/examples/jsm/loaders/GLTFLoader.js'
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas: document.getElementById('c'),
+    antialias: true,
+    preserveDrawingBuffer: true,
+  })
+  // The site (R3F default) tonemaps with ACES; matching it here means the
+  // runtime material can render the bake with toneMapped={false} unchanged.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+
+  // Shared projection frame. FORWARD is the site camera's rest direction
+  // (from [0,-5,10] toward the origin); RIGHT/UP complete the lookAt basis.
+  const RIGHT = new THREE.Vector3(1, 0, 0)
+  const UP = new THREE.Vector3(0, 10, 5).normalize()
+  const FORWARD = new THREE.Vector3(0, 5, -10).normalize()
+
+  function bake(gltf, dark) {
+    const scene = new THREE.Scene()
+    scene.background = new THREE.Color(dark ? '#030712' : '#f9fafb')
+
+    const envScene = new THREE.Scene()
+    envScene.add(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(50, 32, 32),
+        new THREE.MeshBasicMaterial({ color: dark ? '#3e4452' : '#ffffff', side: THREE.DoubleSide })
+      )
+    )
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture
+
+    // Attenuation stands in for drei's backside pass, which refracts through
+    // the letters' rear faces and visibly densifies the glass — without it
+    // the bake reads far paler than the live material.
+    const mat = new THREE.MeshPhysicalMaterial({
+      transmission: 0.7,
+      ior: 1.5,
+      thickness: 0.5,
+      roughness: 0,
+      transparent: true,
+      attenuationColor: new THREE.Color('#6b7280'),
+      attenuationDistance: 0.6,
+      envMapIntensity: 1.4,
+    })
+    // Same per-mesh transform the scenes apply (Center's uniform scale and
+    // translation cancel out of the normalized projection, so they're
+    // deliberately absent here).
+    const group = new THREE.Group()
+    gltf.scene.children.forEach((child) => {
+      if (!child.geometry) return
+      const m = new THREE.Mesh(child.geometry, mat)
+      m.rotation.set(Math.PI / 2, 0, 0)
+      m.scale.setScalar(2)
+      group.add(m)
+    })
+    scene.add(group)
+    group.updateWorldMatrix(true, true)
+
+    let minR = Infinity, maxR = -Infinity, minU = Infinity, maxU = -Infinity, minF = Infinity, maxF = -Infinity
+    const v = new THREE.Vector3()
+    group.traverse((o) => {
+      if (!o.isMesh) return
+      const pos = o.geometry.attributes.position
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld)
+        const r = v.dot(RIGHT), u = v.dot(UP), f = v.dot(FORWARD)
+        if (r < minR) minR = r
+        if (r > maxR) maxR = r
+        if (u < minU) minU = u
+        if (u > maxU) maxU = u
+        if (f < minF) minF = f
+        if (f > maxF) maxF = f
+      }
+    })
+    const w = maxR - minR
+    const h = maxU - minU
+
+    const center = new THREE.Vector3()
+      .addScaledVector(RIGHT, (minR + maxR) / 2)
+      .addScaledVector(UP, (minU + maxU) / 2)
+      .addScaledVector(FORWARD, (minF + maxF) / 2)
+    const cam = new THREE.OrthographicCamera(-w / 2, w / 2, h / 2, -h / 2, 0.1, 100)
+    cam.position.copy(center).addScaledVector(FORWARD, -30)
+    cam.up.copy(UP)
+    cam.lookAt(center)
+
+    const W = 1024
+    const H = Math.max(64, Math.round((W * h) / w))
+    renderer.setSize(W, H, false)
+    renderer.render(scene, cam)
+    const url = renderer.domElement.toDataURL('image/png')
+    pmrem.dispose()
+    return url
+  }
+
+  const loader = new GLTFLoader()
+  const result = {}
+  for (const model of ['name', 'projects', 'art']) {
+    const gltf = await loader.loadAsync(`/public/models/${model}.glb`)
+    result[`${model}-light`] = bake(gltf, false)
+    result[`${model}-dark`] = bake(gltf, true)
+  }
+  window.__result = JSON.stringify(result)
+</script>
