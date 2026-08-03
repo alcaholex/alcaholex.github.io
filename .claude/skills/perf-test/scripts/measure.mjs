@@ -31,9 +31,6 @@ const headed = args.includes('--headed')
 // Inspect mode: open the throttled browser for a human to explore — no
 // measurements, no auto-click; the script exits when the window is closed.
 const inspect = args.includes('--inspect')
-// Pre-arm the site's sticky degrade flag: shows/measures the weak-real-GPU
-// fallback tier on hardware that wouldn't trigger it naturally.
-const forceDegraded = args.includes('--force-degraded')
 // No CDP API throttles the GPU; forcing ANGLE onto SwiftShader (software
 // rasterization) is the worst-case-GPU stand-in.
 const softwareGpu = args.includes('--software-gpu')
@@ -128,14 +125,6 @@ try {
     })
   }
 
-  if (forceDegraded) {
-    await page.evaluateOnNewDocument(() => {
-      try {
-        sessionStorage.setItem('glass-degraded', '1')
-      } catch {}
-    })
-  }
-
   const t0 = Date.now()
   await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded', timeout: 120000 })
 
@@ -214,16 +203,6 @@ try {
   const scrollFPS = await measureFPS(FPS_WINDOW_MS)
   await wheeling
 
-  // Set by the site's adaptive quality guard when sustained low FPS made it
-  // swap to fallback visuals mid-run.
-  const adaptiveDegraded = await page.evaluate(() => {
-    try {
-      return sessionStorage.getItem('glass-degraded') === '1'
-    } catch {
-      return null
-    }
-  })
-
   console.log(JSON.stringify({
     label,
     settings: { cpu, latencyMs, downKbps, upKbps, headed, softwareGpu },
@@ -232,7 +211,6 @@ try {
     gateTimedOut: gateReadyMs >= GATE_TIMEOUT_MS,
     heroFPS,
     scrollFPS,
-    adaptiveDegraded,
   }, null, 2))
 } finally {
   await browser.close()

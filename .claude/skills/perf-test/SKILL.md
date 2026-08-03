@@ -50,7 +50,6 @@ Measures how the site behaves for real visitors on weaker hardware/connections. 
    - `gateTimedOut: true` means assets never reported in and the LoadingGate's 15s escape hatch opened the site — call this out loudly, it means visitors on that connection see a 15s loader.
    - Hero/scroll FPS ≥ ~55 is clean; 30–55 is visible jank on that profile; < 30 is bad.
    - `longFrames` counts frames over 26ms (missed at least one 60Hz frame) during a 5s window.
-   - `adaptiveDegraded: true` means the site's runtime quality guard saw sustained low FPS and swapped to fallback visuals mid-run — expected on heavily CPU-throttled profiles, a red flag on baseline (it would mean real visitors on this class of hardware lose the full visuals).
    - Relate findings to the change just made where you can (e.g. a heavier model → gate-ready regression; a new effect → hero FPS drop under CPU throttle).
 
 ## Judgment calls
@@ -59,10 +58,9 @@ Measures how the site behaves for real visitors on weaker hardware/connections. 
 - **Before/after comparison**: if the user wants numbers versus the pre-change state, run the same three profiles on the base commit in a separate worktree (`git worktree add` + `npm ci` + `npm run build` there), then present both runs side by side with deltas. Only do this when asked — it doubles the runtime.
 - **Custom profiles**: the flags compose freely (`--cpu N`, `--latency ms`, `--down kbps`, `--up kbps`, `--fps-window ms`) if the user asks for a specific device/network target.
 - **Visual check by the user**: `--inspect` opens a visible browser with the chosen throttles applied and takes no measurements — the user explores the site themselves and the script exits when they close the window. Combine with `--software-gpu` (or any throttle flags) to let them experience that profile first-hand.
-- **Forcing the degraded tier**: `--force-degraded` pre-arms the site's sticky `sessionStorage` degrade flag, so the fallback visuals can be seen with `--inspect` or measured on real hardware without waiting for (or qualifying for) the runtime FPS guard.
 
 ## Caveats to include in the report
 
 - Numbers are machine-relative: valid for comparing runs on this machine, not absolute predictions of a phone's FPS.
-- CPU throttling multiplies main-thread cost only; GPU-bound cost (the transmission material) is not throttled on the baseline/mid/low profiles. The gpu-stress profile covers the GPU axis, but as a software-rendering worst case, not a graduated throttle.
+- CPU throttling multiplies main-thread cost only; GPU-bound cost is not throttled on the baseline/mid/low profiles. The gpu-stress profile covers the GPU axis, but as a software-rendering worst case, not a graduated throttle.
 - The test server gzips text assets like GitHub Pages does, so transfer sizes approximate production; binary assets (GLB, images, fonts) are served as-is, also like Pages.
