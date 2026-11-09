@@ -7,6 +7,7 @@ import { Suspense, useRef, useState, useEffect } from 'react'
 import { Vector3, Spherical } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
+import useDeferredMount from './useDeferredMount'
 import ScrollHint from './ScrollHint'
 import * as sfx from './sound'
 
@@ -183,6 +184,7 @@ function LensShift() {
 export default function ProjectsTitle({ modelPath = "/models/projects.glb" }) {
   const containerRef = useRef(null)
   const markReady = useAssetReady('projects')
+  const canvasMounted = useDeferredMount(250)
 
   const [isActive, setIsActive] = useState(false)
 
@@ -198,12 +200,11 @@ export default function ProjectsTitle({ modelPath = "/models/projects.glb" }) {
   return (
     <div ref={containerRef} className="relative w-full h-screen shrink-0">
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
-        <Canvas
+        {canvasMounted && <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
           dpr={[1, 2]}
 
           frameloop={isActive ? 'always' : 'never'}
-          performance={{ min: 0.8 }}
         >
 
 
@@ -214,12 +215,10 @@ export default function ProjectsTitle({ modelPath = "/models/projects.glb" }) {
             <Model url={modelPath} />
             <Warmup onReady={markReady} />
           </Suspense>
-        </Canvas>
+        </Canvas>}
       </div>
 
       <ScrollHint />
     </div>
   )
 }
-
-useGLTF.preload('/models/projects.glb')

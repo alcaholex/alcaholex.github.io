@@ -1,12 +1,17 @@
 'use client'
 
-import ThreeDModel from '../components/ThreeDName'
+import dynamic from 'next/dynamic'
+import TitleSnapshot from '../components/TitleSnapshot'
 import Projects from '../components/Projects'
 import Art from '../components/Art'
 import SlideInSection from '../components/SlideInSection'
 import LoadingGate from '../components/LoadingGate'
 import FlowTimeline from '../components/FlowTimeline'
 import * as sfx from '../components/sound'
+
+// ssr: false splits three.js out of the initial bundle so hydration stays
+// light; the snapshots live out here so they're in the prerendered HTML.
+const ThreeDModel = dynamic(() => import('../components/ThreeDName'), { ssr: false })
 
 const SOCIALS = [
   { label: 'github', handle: 'alcaholex', href: 'https://github.com/alcaholex' },
@@ -20,6 +25,7 @@ export default function Home() {
   return (
     <LoadingGate>
       <main>
+        <TitleSnapshot id="name" />
         <ThreeDModel />
         <section id="section-1" className="h-screen flex items-end justify-center relative z-30 pointer-events-none" data-navbar-theme="light">
         </section>

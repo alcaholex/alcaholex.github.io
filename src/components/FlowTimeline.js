@@ -2,14 +2,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useLenis } from './SmoothScroll'
 import * as sfx from './sound'
 
-// ─── edit the map here ──────────────────────────────────────────────────────
-// Stations: id, year, title, body, optional labelSide ('ne' default /
-// 'sw' / 'se' / 'nw'), labelNudge [dx, dy] px, shift { x, y } in grid units.
-// Lines: ordered station ids; horizontal: true = crosstown row. Layout is
-// generated — VARIANCE (0–100) adds seeded track jogs, reroll JOG_SEED.
 const VARIANCE = 50
 const JOG_SEED = 'alex-2'
 
@@ -95,7 +89,6 @@ const STATION_META = new Map(
       n.id,
       {
         interchange,
-        terminus,
         size: interchange ? 19 : terminus ? 15 : 13,
         side: n.labelSide || 'ne',
         nudge: n.labelNudge || [0, 0],
@@ -204,7 +197,6 @@ function hashSeed(str) {
 }
 
 function layoutMap(nodes, lines) {
-  const nodeById = new Map(nodes.map((n) => [n.id, n]))
   const pos = new Map()
   const linesOf = new Map()
   lines.forEach((L) => L.stations.forEach((id) => {
@@ -414,7 +406,7 @@ function layoutMap(nodes, lines) {
   for (let sweep = 0; sweep < 2; sweep++)
     lines.slice().reverse().forEach((L) => repairLine(L, geomOf(lines.filter((o) => o !== L))))
 
-  return { nodeById, pos, linesOf, kinds, trunkC }
+  return { pos, linesOf, kinds, trunkC }
 }
 
 function routePoints(L, lay) {
@@ -513,7 +505,7 @@ function longJogs(P, v, li, lay, dispPos, otherSegs, ownIds, gseed) {
         })
         if (!rampOK(rampOut, rampOutInc) || !rampOK(rampBack, rampBackInc)) continue
         if (offLen > 1e-6 && !otherSegs.every((t2) => segSegClear([offStart, offEnd], t2, 0.28))) continue
-        return { pts: [outPt].concat(moved.map((mv) => mv[1]), [backPt]), moved, end: b2 }
+        return { pts: [outPt].concat(moved.map((mv) => mv[1]), [backPt]), moved }
       }
     }
     return null
@@ -691,14 +683,12 @@ export default function FlowTimeline() {
 
   const [shown, setShown] = useState(false)
   const closeTimer = useRef(0)
-  const lenis = useLenis()
 
   const openModal = (node) => {
     clearTimeout(closeTimer.current)
     setActive(node)
   }
 
-  // Every close path — X, backdrop, Escape — converges here.
   const dismiss = () => {
     sfx.chord('dismiss')
     setShown(false)
@@ -712,13 +702,14 @@ export default function FlowTimeline() {
       if (e.key === 'Escape') dismiss()
     }
     window.addEventListener('keydown', onKey)
-    lenis?.stop()
+    const prevOverflow = document.documentElement.style.overflow
+    document.documentElement.style.overflow = 'hidden'
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('keydown', onKey)
-      lenis?.start()
+      document.documentElement.style.overflow = prevOverflow
     }
-  }, [active, lenis])
+  }, [active])
 
   const getMotion = (id) => {
     let m = motion.current.get(id)
@@ -875,6 +866,11 @@ export default function FlowTimeline() {
     // No preventDefault here: it suppresses compatibility mouse events and
     // freezes the glass cursor for the whole drag.
     el.setPointerCapture(e.pointerId)
+
+    // A selection spanning the station turns the gesture into a native
+    // drag-of-selection, whose pointercancel kills ours.
+    const sel = window.getSelection()
+    if (sel && !sel.isCollapsed) sel.removeAllRanges()
     const m = getMotion(id)
     m.dragging = true
     m.moved = 0
@@ -897,20 +893,6 @@ export default function FlowTimeline() {
   const onPointerMove = (id) => (e) => {
     const m = getMotion(id)
     if (!m.dragging) return
-
-    // A drag that crosses the viewport edge may never get a clean pointerup
-    // (edge gestures and window switches can swallow it), which would leave
-    // the station hanging at full stretch — release it the moment it exits
-    // and let the spring take it home.
-    if (
-      e.clientX < 0 ||
-      e.clientY < 0 ||
-      e.clientX > window.innerWidth ||
-      e.clientY > window.innerHeight
-    ) {
-      onPointerEnd(id)()
-      return
-    }
 
     m.moved = Math.max(
       m.moved,
@@ -970,9 +952,6 @@ export default function FlowTimeline() {
     }),
   }
 
-  // Terminal arrows: same bubbly paper/ink style as the station discs,
-  // sitting just past the free end of the line and pointing outward. They
-  // live inside the station div, so they ride along with drags.
   const ARROWS = new Map()
   ;['prog', 'blender'].forEach((id) => {
     const line = STATION_LINES.get(id).find(
@@ -984,8 +963,6 @@ export default function FlowTimeline() {
     const a = REST.get(id)
     const b = REST.get(nbId)
     if (!a || !b) return
-    // The track leaves the terminus toward its dogleg elbow when there is
-    // one, so aim along the real first piece, flipped to point outward.
     const pieces = first ? segPieces(a, b) : segPieces(b, a)
     const toward = first
       ? pieces.length === 2
@@ -1056,9 +1033,10 @@ export default function FlowTimeline() {
         {NODES.filter((n) => REST.has(n.id)).map((node) => {
           const meta = STATION_META.get(node.id)
           const rest = REST.get(node.id)
+          const size = meta.size
           const arrowDeg = ARROWS.get(node.id)
           const arrowRad = arrowDeg === undefined ? 0 : (arrowDeg * Math.PI) / 180
-          const arrowDist = meta.size / 2 + 11
+          const arrowDist = size / 2 + 11
           return (
             <div
               key={node.id}
@@ -1071,6 +1049,7 @@ export default function FlowTimeline() {
               onPointerUp={onPointerEnd(node.id)}
               onPointerCancel={onPointerEnd(node.id)}
               onLostPointerCapture={onPointerEnd(node.id)}
+              onDragStart={(e) => e.preventDefault()}
 
               role="button"
               tabIndex={0}
@@ -1084,8 +1063,8 @@ export default function FlowTimeline() {
               className="group absolute select-none will-change-transform"
 
               style={{
-                left: rest.x - meta.size / 2,
-                top: rest.y - meta.size / 2,
+                left: rest.x - size / 2,
+                top: rest.y - size / 2,
                 // The page must not scroll out from under a station drag.
                 touchAction: 'none',
               }}
@@ -1094,13 +1073,13 @@ export default function FlowTimeline() {
               <span
                 aria-hidden="true"
                 className="absolute"
-                style={{ inset: (meta.size - HIT_SIZE) / 2 }}
+                style={{ inset: (size - HIT_SIZE) / 2 }}
               />
 
               <svg
                 aria-hidden="true"
-                width={meta.size}
-                height={meta.size}
+                width={size}
+                height={size}
                 viewBox="0 0 24 24"
                 className="block transition-transform duration-100 ease-in-out group-hover:scale-110"
               >
@@ -1110,15 +1089,11 @@ export default function FlowTimeline() {
               {arrowDeg !== undefined && (
                 <svg
                   aria-hidden="true"
-                  width={meta.size}
-                  height={meta.size}
+                  width={size}
+                  height={size}
                   viewBox="0 0 24 24"
                   className="pointer-events-none absolute"
                   style={{
-                    // Same size as the disc svg, so centering cancels out:
-                    // offsetting the top-left by the polar offset centers it.
-                    // Position sits outward past the free end; +180 turns the
-                    // head back to point into the line.
                     left: Math.cos(arrowRad) * arrowDist,
                     top: Math.sin(arrowRad) * arrowDist,
                     transform: `rotate(${arrowDeg + 180}deg)`,

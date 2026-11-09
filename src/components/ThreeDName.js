@@ -4,13 +4,14 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { useGLTF, Center, OrbitControls } from '@react-three/drei'
 import TitleMaterial from './TitleMaterial'
 import { Suspense, useRef, useState, useEffect } from 'react'
-import { Vector3, Spherical } from 'three'
+import { Vector3, Spherical, Box3 } from 'three'
 import Warmup from './Warmup'
 import { useAssetReady } from './LoadingGate'
+import useDeferredMount from './useDeferredMount'
 import ScrollHint from './ScrollHint'
 import * as sfx from './sound'
 
-function Model({ url, onLoad }) {
+function Model({ url, onLoad, groupRef }) {
   const { scene } = useGLTF(url, true)
   const { viewport } = useThree()
 
@@ -21,25 +22,98 @@ function Model({ url, onLoad }) {
   }, [scene, onLoad])
 
   return (
-    <Center scale={viewport.width / 8.5}>
-      {scene.children.map((child, index) => (
-        <mesh
-          key={index}
-          geometry={child.geometry}
-          scale={[2, 2, 2]}
-          rotation={[Math.PI / 2, 0, 0]}
-        >
+    <group ref={groupRef}>
+      <Center scale={viewport.width / 8.5}>
+        {scene.children.map((child, index) => (
+          <mesh
+            key={index}
+            geometry={child.geometry}
+            scale={[2, 2, 2]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
 
-          <TitleMaterial aoUrl="/ao/name-ao.png" />
-        </mesh>
-      ))}
-    </Center>
+            <TitleMaterial aoUrl="/ao/name-ao.png" />
+          </mesh>
+        ))}
+      </Center>
+    </group>
   )
 }
 
-function AutoResetOrbitControls() {
+// Keeps the touch overlay glued to the title's screen-space bounds. The div
+// is positioned/sized outright (not clip-path'd) — WebKit's clip-path
+// hit-testing is unreliable, plain element bounds are not.
+function TitleHitArea({ modelRef, overlayRef }) {
+  const { camera, size } = useThree()
+  const box = useRef(new Box3())
+  const v = useRef(new Vector3())
+
+  useFrame(() => {
+    const el = overlayRef.current
+    const obj = modelRef.current
+    if (!el || !obj) return
+
+    box.current.setFromObject(obj)
+    if (box.current.isEmpty()) return
+
+    const { min, max } = box.current
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (let i = 0; i < 8; i++) {
+      v.current
+        .set(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? max.z : min.z)
+        .project(camera)
+      const sx = (v.current.x + 1) * 0.5 * size.width
+      const sy = (1 - v.current.y) * 0.5 * size.height
+      if (sx < minX) minX = sx
+      if (sx > maxX) maxX = sx
+      if (sy < minY) minY = sy
+      if (sy > maxY) maxY = sy
+    }
+
+    const pad = 20
+    const left = Math.max(0, minX - pad)
+    const top = Math.max(0, minY - pad)
+    el.style.left = `${left}px`
+    el.style.top = `${top}px`
+    el.style.width = `${Math.min(size.width, maxX + pad) - left}px`
+    el.style.height = `${Math.min(size.height, maxY + pad) - top}px`
+  })
+
+  return null
+}
+
+function AutoResetOrbitControls({ domElement }) {
   const controlsRef = useRef()
   const timeoutRef = useRef()
+  const { gl } = useThree()
+  const prevOverflow = useRef(null)
+  // iOS honors preventDefault on non-passive touchmove where it ignores
+  // touch-action: none (notably the top-of-page rubber-band).
+  const blockTouch = useRef((e) => {
+    if (e.cancelable) e.preventDefault()
+  })
+
+  const lockScroll = () => {
+    if (prevOverflow.current === null) {
+      prevOverflow.current = document.documentElement.style.overflow
+      document.documentElement.style.overflow = 'hidden'
+      window.addEventListener('touchmove', blockTouch.current, { passive: false })
+    }
+  }
+  const unlockScroll = () => {
+    if (prevOverflow.current !== null) {
+      document.documentElement.style.overflow = prevOverflow.current
+      prevOverflow.current = null
+      window.removeEventListener('touchmove', blockTouch.current)
+    }
+  }
+
+  useEffect(() => {
+    if (!domElement) return
+    const block = blockTouch.current
+    domElement.addEventListener('touchmove', block, { passive: false })
+    return () => domElement.removeEventListener('touchmove', block)
+  }, [domElement])
   const initialSpherical = useRef(new Spherical(11.18, Math.PI / 2 + Math.asin(5/11.18), 0)) 
   const initialTarget = useRef(new Vector3(0, 0, 0))
   const [isResetting, setIsResetting] = useState(false)
@@ -75,6 +149,15 @@ function AutoResetOrbitControls() {
   useFrame((state, delta) => {
 
     const c = controlsRef.current
+
+    // OrbitControls scales rotation by the bound element's height; when bound
+    // to the title-sized overlay, rescale so the feel matches canvas binding.
+    if (c && domElement) {
+      const h = domElement.clientHeight
+      const H = gl.domElement.clientHeight
+      if (h && H) c.rotateSpeed = (2 * h) / H
+    }
+
     if (c && delta > 0) {
       const az = c.getAzimuthalAngle()
       const pol = c.getPolarAngle()
@@ -152,20 +235,29 @@ function AutoResetOrbitControls() {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
+      unlockScroll()
     }
   }, [])
 
   return (
     <OrbitControls
       ref={controlsRef}
+      domElement={domElement}
       enableZoom={false}
       enablePan={false}
       rotateSpeed={2}
       // Unlock on both edges: desktop grants audio activation on pointerdown,
       // mobile Chrome only on release — so the first touch-drag's ease-home
-      // still hums.
-      onStart={() => sfx.unlock()}
-      onEnd={() => sfx.unlock()}
+      // still hums. Scroll lock is overlay-path only: on desktop the vanishing
+      // scrollbar would reflow the page mid-drag.
+      onStart={() => {
+        sfx.unlock()
+        if (domElement) lockScroll()
+      }}
+      onEnd={() => {
+        sfx.unlock()
+        unlockScroll()
+      }}
     />
   )
 }
@@ -200,11 +292,32 @@ function DragHint() {
 
 export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
   const markReady = useAssetReady('name')
+  const canvasMounted = useDeferredMount(0)
 
   const [isLoaded, setIsLoaded] = useState(false)
   const [showHint, setShowHint] = useState(!hasDraggedBefore)
 
   const [isActive, setIsActive] = useState(true)
+
+  // On touch devices the controls bind to a clip-path overlay over the title
+  // instead of the canvas, so swipes on empty space scroll the page.
+  const [isCoarse, setIsCoarse] = useState(false)
+  const [overlayEl, setOverlayEl] = useState(null)
+  const overlayRef = useRef(null)
+  const modelRef = useRef(null)
+
+  const setOverlay = (el) => {
+    overlayRef.current = el
+    setOverlayEl(el)
+  }
+
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)')
+    const update = () => setIsCoarse(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   const handleModelLoad = () => {
     setIsLoaded(true)
@@ -216,7 +329,8 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
     let origin = null
 
     const handlePointerDown = (e) => {
-      origin = e.target?.tagName === 'CANVAS' ? { x: e.clientX, y: e.clientY } : null
+      const onScene = e.target?.tagName === 'CANVAS' || e.target?.hasAttribute?.('data-title-drag')
+      origin = onScene ? { x: e.clientX, y: e.clientY } : null
     }
     const handlePointerMove = (e) => {
       if (!origin) return
@@ -256,25 +370,32 @@ export default function ThreeDModel({ modelPath = "/models/name.glb" }) {
 
   return (
     <>
-
       <div className={`absolute inset-x-0 top-0 h-screen md:h-[150vh] z-40 ${isActive ? '' : 'pointer-events-none'}`}>
-        <Canvas
+        {canvasMounted && <Canvas
           camera={{ position: [0, -5, 10], fov: 50 }}
           dpr={[1, 2]}
 
           frameloop={isActive ? 'always' : 'never'}
-          performance={{ min: 0.8 }}
         >
 
 
-          <AutoResetOrbitControls />
+          <AutoResetOrbitControls domElement={overlayEl ?? undefined} />
           <LensShift />
+          {overlayEl && <TitleHitArea modelRef={modelRef} overlayRef={overlayRef} />}
 
           <Suspense fallback={null}>
-            <Model url={modelPath} onLoad={handleModelLoad} />
+            <Model url={modelPath} onLoad={handleModelLoad} groupRef={modelRef} />
             <Warmup onReady={markReady} />
           </Suspense>
-        </Canvas>
+        </Canvas>}
+        {isCoarse && (
+          <div
+            ref={setOverlay}
+            data-title-drag=""
+            className="absolute"
+            style={{ left: 0, top: 0, width: 0, height: 0 }}
+          />
+        )}
       </div>
       {isActive && isLoaded && showHint && <DragHint />}
       <ScrollHint enabled={isLoaded} />

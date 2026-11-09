@@ -1,13 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useLenis } from './SmoothScroll'
+import { navScroll } from './navScroll'
 import * as sfx from './sound'
 
 export default function ScrollHint({ enabled = true }) {
   const wrapperRef = useRef(null)
-  const lenis = useLenis()
-
   const [atTop, setAtTop] = useState(true)
 
   useEffect(() => {
@@ -15,7 +13,6 @@ export default function ScrollHint({ enabled = true }) {
       const wrapper = wrapperRef.current
       if (!wrapper) return
       const top = wrapper.getBoundingClientRect().top
-
       setAtTop(top < 50 && top > -0.3 * window.innerHeight)
     }
 
@@ -30,25 +27,16 @@ export default function ScrollHint({ enabled = true }) {
 
   const visible = enabled && atTop
 
-  // Stop short of the title screen's exact bottom: the navbar strip is fixed
-  // over the top ~52px of the viewport, and the projects/art columns start
-  // with no top padding — landing flush would tuck their first line under it.
   const LANDING_CLEARANCE = 80
 
   const scrollOn = () => {
     const wrapper = wrapperRef.current
     if (!wrapper) return
     sfx.chord('descend')
-    // Absolute target — the bottom of this title screen — not "one viewport
-    // from wherever the page is": the hint stays clickable well into the
-    // scroll, and a relative jump overshoots by however far you've come.
+    navScroll.mark()
     const rect = wrapper.getBoundingClientRect()
     const target = window.scrollY + rect.top + rect.height - LANDING_CLEARANCE
-    if (lenis) {
-      lenis.scrollTo(target)
-    } else {
-      window.scrollTo({ top: target, behavior: 'smooth' })
-    }
+    window.scrollTo({ top: target, behavior: 'smooth' })
   }
 
   return (
@@ -56,7 +44,6 @@ export default function ScrollHint({ enabled = true }) {
       ref={wrapperRef}
       className={`absolute inset-x-0 top-0 h-[100dvh] z-40 pointer-events-none flex items-end justify-center pb-6 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
-
       <button
         type="button"
         onClick={scrollOn}

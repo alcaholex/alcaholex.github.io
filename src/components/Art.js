@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import ArtTitle from './ArtTitle'
+import dynamic from 'next/dynamic'
+import TitleSnapshot from './TitleSnapshot'
+
+const ArtTitle = dynamic(() => import('./ArtTitle'), { ssr: false })
 import { InstagramIcon } from './Icons'
 import * as sfx from './sound'
-import { useLenis } from './SmoothScroll'
 
 const artworks = [
   {
@@ -84,15 +86,12 @@ const SLIDE_MS = 350
 const touchDistance = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 
 function Lightbox({ art, onClose }) {
-  const lenis = useLenis()
-
   const [shown, setShown] = useState(false)
   const [zoomed, setZoomed] = useState(false)
   const viewRef = useRef(null)
 
   const view = useRef({ scale: 1, x: 0, y: 0 })
 
-  // Every close path — X, backdrop, Escape — converges here.
   const dismiss = useCallback(() => {
     sfx.chord('dismiss')
     setShown(false)
@@ -105,14 +104,14 @@ function Lightbox({ art, onClose }) {
       if (e.key === 'Escape') dismiss()
     }
     window.addEventListener('keydown', onKey)
-
-    lenis?.stop()
+    const prevOverflow = document.documentElement.style.overflow
+    document.documentElement.style.overflow = 'hidden'
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('keydown', onKey)
-      lenis?.start()
+      document.documentElement.style.overflow = prevOverflow
     }
-  }, [lenis, dismiss])
+  }, [dismiss])
 
   useEffect(() => {
     const el = viewRef.current
@@ -302,7 +301,10 @@ export default function Art() {
     <section className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col justify-start relative z-30">
 
       <h1 className="sr-only">art</h1>
-      <ArtTitle />
+      <div className="relative w-full h-screen shrink-0">
+        <TitleSnapshot id="art" />
+        <ArtTitle />
+      </div>
 
       <div className="mx-auto w-full max-w-[560px] px-6">
         <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
@@ -334,7 +336,6 @@ export default function Art() {
                       <h3 className="text-white text-lg font-medium mb-1 drop-shadow-lg">{art.title}</h3>
                       <p className="text-white/80 text-sm drop-shadow-lg">{art.description}</p>
                     </div>
-
                     <button
                       type="button"
                       onClick={() => {
@@ -344,7 +345,6 @@ export default function Art() {
                       aria-label={`View ${art.title} full size`}
                       className="absolute inset-0 z-10 cursor-pointer"
                     />
-
                     <a href={art.href} target="_blank" rel="noopener noreferrer" onClick={() => sfx.chord('artLink')} className="absolute top-4 right-4 z-20 bg-black/30 backdrop-blur-sm rounded-full p-2 hover:bg-black/40 transition-all duration-200">
                       <InstagramIcon className="w-5 h-5 text-white" />
                     </a>

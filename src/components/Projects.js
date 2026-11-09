@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import ProjectsTitle from './ProjectsTitle'
+import dynamic from 'next/dynamic'
+import TitleSnapshot from './TitleSnapshot'
+
+const ProjectsTitle = dynamic(() => import('./ProjectsTitle'), { ssr: false })
 import * as sfx from './sound'
 
 const projects = [
@@ -110,7 +113,10 @@ export default function Projects() {
     <section className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col justify-start relative z-30">
 
       <h1 className="sr-only">projects</h1>
-      <ProjectsTitle />
+      <div className="relative w-full h-screen shrink-0">
+        <TitleSnapshot id="projects" />
+        <ProjectsTitle />
+      </div>
 
       <div className="mx-auto w-full max-w-[560px] px-6 pb-16">
 
@@ -176,17 +182,12 @@ export default function Projects() {
                   </svg>
                 </button>
 
-                {/* 0fr→1fr is the animatable stand-in for height:auto. */}
                 <div
                   id={panelId}
                   className={`grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
                 >
                   <div className="overflow-hidden">
                     <div className={`pb-6 ${PANEL_INSET}`}>
-                      {/* Whole image, natural ratio — panel heights vary a
-                          little rather than any picture losing edges. Skipped
-                          when a project has no image (an <img> without src
-                          renders a broken-image icon). */}
                       {project.image && (
                         <img
                           src={project.image}

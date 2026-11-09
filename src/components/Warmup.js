@@ -3,6 +3,10 @@
 import { useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 
+// Serialized across canvases: concurrent compiles + first frames coalesce
+// into one long main-thread task; one at a time keeps the page responsive.
+let queue = Promise.resolve()
+
 export default function Warmup({ onReady }) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
@@ -12,7 +16,8 @@ export default function Warmup({ onReady }) {
   useEffect(() => {
     let cancelled = false
 
-    const handle = setTimeout(async () => {
+    queue = queue.then(async () => {
+      if (cancelled) return
       try {
         await gl.compileAsync(scene, camera)
         if (cancelled) return
@@ -21,11 +26,10 @@ export default function Warmup({ onReady }) {
       } catch {
       }
       if (!cancelled) onReady()
-    }, 0)
+    })
 
     return () => {
       cancelled = true
-      clearTimeout(handle)
     }
   }, [gl, scene, camera, advance, onReady])
 

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useLenis } from './SmoothScroll'
+import { navScroll } from './navScroll'
 import * as sfx from './sound'
 
 const navItems = [
@@ -34,7 +34,6 @@ export default function Navbar() {
   const toggleMute = () => {
     setMuted((m) => {
       sfx.setMuted(!m)
-      // Unmuting announces itself; muting is, correctly, silent.
       if (m) sfx.chord('unmute')
       return !m
     })
@@ -56,21 +55,12 @@ export default function Navbar() {
     })
   }
 
-  const lenis = useLenis()
-  const lenisRef = useRef(null)
-  useEffect(() => {
-    lenisRef.current = lenis
-  }, [lenis])
-
   const smoothScrollTo = useCallback((target, options) => {
-    if (lenisRef.current) {
-      // The nav tag rides on Lenis for the whole travel; SlideInSection uses
-      // it to not treat a passing navigation as a swipe to commit.
-      lenisRef.current.scrollTo(target, { userData: { nav: true }, ...options })
-    } else if (typeof target !== 'number') {
-      target.scrollIntoView({ behavior: 'smooth' })
+    navScroll.mark()
+    if (typeof target === 'number') {
+      window.scrollTo({ top: target, behavior: options?.immediate ? 'auto' : 'smooth' })
     } else {
-      window.scrollTo(0, target)
+      target.scrollIntoView({ behavior: 'smooth' })
     }
   }, [])
 
@@ -80,8 +70,8 @@ export default function Navbar() {
   )
 
   const handleNavClick = (e, item) => {
-    // Mouse clicks must drop focus or focus-within holds the labels open;
-    // e.detail is 0 for keyboard activation, which keeps its focus.
+    // e.detail is 0 for keyboard activation; mouse clicks must blur or
+    // focus-within holds the labels open.
     if (e.detail > 0) e.currentTarget.blur()
 
     if (!item.scrollTo || pathname !== '/') return
@@ -113,8 +103,6 @@ export default function Navbar() {
 
     updateActiveSection()
 
-    // rAF-coalesced, NOT time-throttled: dropping the last event of a
-    // gesture leaves the marker stranded a stop behind.
     let queued = false
     const handleScroll = () => {
       if (queued) return
@@ -124,9 +112,11 @@ export default function Navbar() {
         updateActiveSection()
 
         if (isNavigating.current) {
+          navScroll.mark()
           if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
           scrollTimeoutRef.current = setTimeout(() => {
             isNavigating.current = false
+            navScroll.clear()
           }, 300)
         }
       })

@@ -1,10 +1,7 @@
 @import "tailwindcss";
 
-/* Dark mode is a class on <html>, flipped by the navbar switch. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* One-shot theme cross-fade: on <html> only while the switch flips.
-   !important so it beats inline styles and per-element transitions. */
 .theme-fading,
 .theme-fading *,
 .theme-fading *::before,
@@ -21,11 +18,8 @@
 :root {
   --background: #f9fafb;
   --foreground: #171717;
-  /* Theme-following colours for the metro map's inked SVG parts. */
   --ink: #111827;
   --paper: #ffffff;
-  /* Helvetica Neue is licensed and must come from the visitor's machine;
-     Arial shares its metrics, Arimo (--font-display) is the webfont backstop. */
   --font-stack: "Helvetica Neue", Helvetica, Arial, var(--font-display),
     sans-serif;
 }
@@ -43,8 +37,6 @@
   --font-sans: var(--font-stack);
 }
 
-/* clip (not hidden) on BOTH: html is the real scroll container, and neither
-   may become a horizontal one when swipes or station drags overflow. */
 html {
   overflow-x: clip;
   background: var(--background);
@@ -58,42 +50,13 @@ body {
   overflow-x: clip;
 }
 
-/* The navbar alone stays on Montserrat. */
 .font-nav {
   font-family: var(--font-nav), "Montserrat", sans-serif;
 }
 
 /* Universal + !important, or any element with its own cursor style brings
    the native arrow back over the glass cursor. */
-html.glass-cursor:not(.is-loading),
-html.glass-cursor:not(.is-loading) * {
+html.glass-cursor,
+html.glass-cursor * {
   cursor: none !important;
-}
-
-html.is-loading .glass-cursor-dot {
-  opacity: 0 !important;
-}
-
-/* Nothing scrolls behind the gate: the loader owns the viewport until the
-   visitor clicks through. */
-html.is-loading {
-  overflow: hidden;
-}
-
-/* Lenis smooth scroll owns the scroll animation. */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: hidden;
 }

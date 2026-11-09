@@ -1,7 +1,4 @@
-// All sounds are synthesized here at call time; no audio files. The context
-// is created/resumed ONLY from gesture-bound calls (unlock, snap, navTo) —
-// browsers refuse audio before a user gesture, and the continuous voices
-// (spin, stretchTo) stay silent until something has unlocked it.
+// The AudioContext is created/resumed ONLY from gesture-bound calls — browsers refuse audio before a user gesture.
 const MASTER = 0.5
 
 let ctx = null
@@ -19,10 +16,7 @@ export function isMuted() {
   return mutedFlag
 }
 
-// iOS mutes plain Web Audio with the ringer switch; a PLAYING media element
-// flips the session to the playback category, switch and all. The keeper is
-// 50ms of silent PCM generated in memory, looping; re-armed per gesture
-// because backgrounding pauses it.
+// Looping silent <audio> keeps iOS from muting Web Audio via the ringer switch; re-armed per gesture because backgrounding pauses it.
 let keeper = null
 function keepAlive() {
   if (typeof document === 'undefined') return
@@ -85,12 +79,7 @@ export function unlock() {
   ensure(true)
 }
 
-// First-gesture unlock, page-wide. The per-component unlocks are not enough
-// on mobile: the title canvases are touch-action pan-y, so the browser takes
-// any vertical drag for scrolling and fires pointercancel — no release, no
-// activation, no audio permission from that gesture at all. Any COMPLETED
-// tap anywhere on the page arms audio instead; the listeners retry until it
-// sticks, then remove themselves.
+// Per-component unlocks fail on mobile (pan-y canvases turn vertical drags into pointercancel — no activation), so any completed tap page-wide arms audio.
 if (typeof window !== 'undefined') {
   const firstGesture = () => {
     ensure(true)
@@ -103,11 +92,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', firstGesture, true)
 }
 
-// A feather-light tick on entering anything clickable, wired once by
-// delegation instead of per component. Mouse only: on touch, pointerover
-// fires as part of the tap and would double up with the tap's own sound.
-// Silent until some gesture has unlocked audio — a hover is not one.
-// Elements opting into the heavier tick carry data-sfx-hover="heavy".
 const HOVER_SELECTOR = 'a, button, [role="button"]'
 let hoverEl = null
 let hoverAt = 0
@@ -142,8 +126,6 @@ if (typeof window !== 'undefined') {
   )
 }
 
-// A departure-board row opening (higher dot) or closing (the root) — the
-// map's own mallet, one octave apart so the toggle reads as a direction.
 let reverbV = null
 function reverbIn() {
   if (!reverbV) {
@@ -292,9 +274,6 @@ export function stretchTo(amount) {
   o.stop(t + 0.16)
 }
 
-// The shared hum voice: a chord of pure sines that swells, holds a beat and
-// releases into the room. Every chorded interaction on the site speaks
-// through this; ratios are just intonation on the pluck root (A3).
 function hum(ratios, { gain = 1, hold = 0.08, gesture = true } = {}) {
   if (gesture) {
     if (!ensure(true)) return
@@ -327,8 +306,6 @@ function hum(ratios, { gain = 1, hold = 0.08, gesture = true } = {}) {
   })
 }
 
-// The navbar's cadence: I - IV - V - I(octave), so riding the site down
-// plays a resolution one stop at a time.
 const NAV_CHORDS = [
   [1, 1.25, 1.5],
   [4 / 3, 5 / 3, 2],
@@ -343,26 +320,20 @@ export function navTo(stop, emphatic = false) {
   })
 }
 
-// The site's other chorded moments. OPENERS are drawn at random from a pool
-// per press — every entry is diatonic in A and leans away from the root, so
-// whichever one plays, the FIXED low closers below still resolve it. The
-// closers stay constant on purpose: variety belongs to setting out, and
-// coming home should always sound like home.
 const OPEN_POOL = [
-  [1, 5 / 4, 3 / 2], // I
-  [4 / 3, 5 / 3, 2], // IV
-  [3 / 2, 15 / 8, 9 / 4], // V
-  [9 / 8, 4 / 3, 5 / 3], // ii
-  [5 / 3, 2, 5 / 2], // vi
-  [1, 4 / 3, 3 / 2], // sus4
-  [1, 3 / 2, 9 / 4], // sus2 sparkle
-  [2, 5 / 2, 3], // I, octave up
+  [1, 5 / 4, 3 / 2],
+  [4 / 3, 5 / 3, 2],
+  [3 / 2, 15 / 8, 9 / 4],
+  [9 / 8, 4 / 3, 5 / 3],
+  [5 / 3, 2, 5 / 2],
+  [1, 4 / 3, 3 / 2],
+  [1, 3 / 2, 9 / 4],
+  [2, 5 / 2, 3],
 ]
-// Going dark draws from low, moodier voicings instead.
 const DARK_POOL = [
-  [5 / 6, 1, 5 / 4], // F#m low
-  [2 / 3, 5 / 6, 1], // D low
-  [3 / 4, 1, 5 / 4], // A low, first inversion
+  [5 / 6, 1, 5 / 4],
+  [2 / 3, 5 / 6, 1],
+  [3 / 4, 1, 5 / 4],
 ]
 const POOLS = {
   link: OPEN_POOL,
@@ -375,10 +346,10 @@ const POOLS = {
   themeDark: DARK_POOL,
 }
 const CHORDS = {
-  labelsOff: [3 / 4, 1, 5 / 4], // low resolve
-  unmute: [1, 5 / 4, 3 / 2, 2], // full four-voice A — sound is back
-  boardClose: [3 / 4, 1, 5 / 4], // back to the root — closed
-  dismiss: [3 / 4, 1, 3 / 2], // low open fifth — a modal settling shut
+  labelsOff: [3 / 4, 1, 5 / 4],
+  unmute: [1, 5 / 4, 3 / 2, 2],
+  boardClose: [3 / 4, 1, 5 / 4],
+  dismiss: [3 / 4, 1, 3 / 2],
 }
 export function chord(name, gain = 1) {
   const pool = POOLS[name]

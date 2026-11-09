@@ -3,11 +3,8 @@ import localFont from "next/font/local";
 import { preload } from "react-dom";
 import "./globals.css";
 import Navbar from "../components/Navbar";
-import SmoothScroll from "../components/SmoothScroll";
 import GlassCursor from "../components/GlassCursor";
 
-// Webfont backstop for the local-first Helvetica Neue/Arial stack in
-// globals.css; Arimo is metric-compatible, so line breaks never move.
 const fallback = Arimo({
   variable: "--font-display",
   subsets: ["latin"],
@@ -19,8 +16,6 @@ const navFont = Montserrat({
   weight: ["400", "500", "600"],
 });
 
-// Loading-screen button only. display: "block" — the loader is the first
-// paint, so hold the text invisible briefly rather than flash a fallback.
 const fascinate = localFont({
   src: "../../public/fonts/Fascinate Font/Fascinate-Regular.ttf",
   variable: "--font-fascinate",
@@ -40,10 +35,6 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  // The LoadingGate can't lift until all three models arrive; preloaded from
-  // the HTML head they stop queueing behind the JS/image waterfall on slow
-  // connections. crossOrigin must match three's FileLoader request (cors mode,
-  // same-origin credentials) or the browser downloads every model twice.
   for (const model of ["name", "projects", "art"]) {
     preload(`/models/${model}.glb`, {
       as: "fetch",
@@ -53,8 +44,6 @@ export default function RootLayout({ children }) {
   }
 
   return (
-
-    // suppressHydrationWarning: the script below may add `dark` pre-hydration.
     <html lang="en" className={`${fallback.variable} ${navFont.variable} ${fascinate.variable}`} suppressHydrationWarning>
       <body className="antialiased">
         {/* Saved theme restored BEFORE first paint, so no light flash. */}
@@ -64,11 +53,9 @@ export default function RootLayout({ children }) {
               "try{if(localStorage.theme==='dark')document.documentElement.classList.add('dark')}catch(e){}",
           }}
         />
-        <SmoothScroll>
-          <Navbar />
-          {children}
-          <GlassCursor />
-        </SmoothScroll>
+        <Navbar />
+        {children}
+        <GlassCursor />
       </body>
     </html>
   );
